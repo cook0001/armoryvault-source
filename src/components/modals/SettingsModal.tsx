@@ -197,9 +197,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
       if (!window.api || !window.api.restoreBackup) return;
 
       const confirmed = window.confirm(
-        'Are you sure you want to restore from a backup?\n\n' +
-          'This will replace your current active vault with the selected backup file (.enc or .zip).\n\n' +
-          'A safety copy of your current database will be created automatically before restoring.'
+        'Are you sure you want to restore or import a database?\n\n' +
+          'This will import from your selected backup or database file (.enc, .zip, .sqlite, .db, .json, .bak).\n\n' +
+          'A safety copy of your current database will be created automatically before importing.'
       );
       if (!confirmed) return;
 
@@ -210,7 +210,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
         if (res.success) {
           if (res.requiresRelogin) {
             alert(
-              'Vault restored successfully!\n\nThe restored backup was created with a different password or encryption key. The vault will now lock so you can log in.'
+              res.message ||
+                'Database restored successfully!\n\nThe restored database was created with a different password or encryption key. The vault will now lock so you can log in.'
             );
             if (onLockVault) {
               onLockVault();
@@ -219,17 +220,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
             }
             onClose();
           } else {
-            alert('Database successfully restored from backup!');
+            alert(res.message || 'Database successfully imported into active vault!');
             onClose();
             if (onSettingsSaved) onSettingsSaved();
             window.location.reload();
           }
         } else {
-          alert(`Failed to restore backup: ${res.error || 'Unknown error'}`);
+          alert(`Failed to import database: ${res.error || 'Unknown error'}`);
         }
       } catch (e: any) {
-        console.error('Error restoring backup:', e);
-        alert(`An error occurred while restoring the backup: ${e.message || e}`);
+        console.error('Error importing database:', e);
+        alert(`An error occurred while importing the database: ${e.message || e}`);
       }
     };
 
@@ -240,71 +241,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
         <div
           className="modal-overlay"
           onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(8px)',
-          }}
         >
           <div
-            className="modal"
+            className="modal modal-settings-dialog"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '680px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}
           >
             {/* Header */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-                borderBottom: '1px solid var(--border-light)',
-                paddingBottom: '1rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Settings className="text-accent" size={24} style={{ color: 'var(--accent)' }} />
+            <div className="settings-modal-header">
+              <div className="settings-modal-title-wrap">
+                <Settings className="settings-modal-icon text-accent" size={24} />
                 <div>
-                  <h2 style={{ margin: 0, padding: 0, border: 'none', fontSize: '1.4rem' }}>
+                  <h2 className="settings-modal-heading">
                     Settings & Preferences
                   </h2>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <div className="settings-modal-subheading">
                     Security, automated backups, tactical themes, and vault configuration.
                   </div>
                 </div>
               </div>
               <button
-                className="btn-icon"
+                type="button"
+                className="btn-icon settings-close-btn"
                 onClick={onClose}
-                style={{
-                  fontSize: '1.5rem',
-                  lineHeight: '1',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                }}
               >
                 &times;
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="settings-sections-list">
               {/* Backups & Redundancy Section */}
               <BackupSettingsSection
                 backupPath={backupPath}
@@ -357,15 +321,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
               />
             </div>
 
-            <div
-              className="modal-actions"
-              style={{
-                marginTop: '1.5rem',
-                paddingTop: '1rem',
-                borderTop: '1px solid var(--border-light)',
-              }}
-            >
-              <button className="btn-primary" onClick={onClose} style={{ minWidth: '100px' }}>
+            <div className="modal-actions settings-footer-actions">
+              <button type="button" className="btn-primary settings-done-btn" onClick={onClose}>
                 Done
               </button>
             </div>

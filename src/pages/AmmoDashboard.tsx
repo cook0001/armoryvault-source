@@ -40,6 +40,7 @@ import {
   ShotgunIcon,
 } from '../components/CustomIcons';
 import { AmmoCanLabelModal } from '../components/modals/AmmoCanLabelModal';
+import { AmmoModal } from '../components/modals/AmmoModal';
 import { BatchManufactureModal } from '../components/modals/BatchManufactureModal';
 import { ReloadingComponentModal } from '../components/modals/ReloadingComponentModal';
 import { StorageBadge, StorageLocationSelect } from '../components/StorageBadge';
@@ -481,6 +482,41 @@ export const AmmoDashboard = () => {
         type: 'success',
       });
       return;
+    }
+
+    // 2b. Check LoadBench Handload QR / JSON payload
+    if (
+      upc.trim().startsWith('{') ||
+      upc.includes('"type":"handload"') ||
+      upc.includes('LoadBench')
+    ) {
+      const parsed = parseBarcodeData(upc, ammoList);
+      if (parsed.category === 'ammo' && parsed.parsedAmmo) {
+        setActiveAmmoTab('handload');
+        setFormData((prev) => ({
+          ...prev,
+          type: 'handload',
+          caliber: parsed.parsedAmmo?.caliber || prev.caliber,
+          grain: parsed.parsedAmmo?.grain || prev.grain,
+          projectile: parsed.parsedAmmo?.projectile || prev.projectile,
+          powder: parsed.parsedAmmo?.powder || prev.powder,
+          powderCharge: parsed.parsedAmmo?.powderCharge || prev.powderCharge,
+          primer: parsed.parsedAmmo?.primer || prev.primer,
+          oal: parsed.parsedAmmo?.oal || prev.oal,
+          count: parsed.parsedAmmo?.count || prev.count,
+          notes: parsed.parsedAmmo?.notes || prev.notes,
+          upc_code: parsed.parsedAmmo?.upc_code || '',
+        }));
+        if (parsed.parsedAmmo.count) {
+          setCalcRds(parsed.parsedAmmo.count);
+          setCalcBoxes(1);
+        }
+        setUpcStatus({
+          message: `LoadBench Handload Identified: ${parsed.bestTitle}`,
+          type: 'success',
+        });
+        return;
+      }
     }
 
     try {
@@ -2516,756 +2552,99 @@ export const AmmoDashboard = () => {
         </div>
       )}
 
-      {/* Comprehensive Ammo Form Modal (With Bullet Type & All Detailed Fields) */}
-      {isAmmoModalOpen &&
-        createPortal(
-          <div className="modal-overlay" onClick={() => setIsAmmoModalOpen(false)}>
-            <div
-              className="modal"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                maxWidth: formData.type === 'handload' ? '860px' : '720px',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-              }}
-            >
-              <div className="modal-header">
-                <h2 style={{ margin: 0 }}>
-                  {isAddingStockMode ? 'Add Stock' : editingAmmo ? 'Edit' : 'Add'}{' '}
-                  {formData.type === 'factory' ? 'Factory Ammo' : 'Custom Handload'}
-                </h2>
-                <button
-                  type="button"
-                  className="btn-icon"
-                  onClick={() => setIsAmmoModalOpen(false)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
+      {/* Standalone Modular Ammo Form Modal */}
+      <AmmoModal
+        isOpen={isAmmoModalOpen}
+        onClose={() => {
+          setIsAmmoModalOpen(false);
+          setIsAddingStockMode(false);
+        }}
+        onSave={async (submissionData, locId) => {
+          let savedId = editingAmmo?.id || null;
+          if (editingAmmo && editingAmmo.id) {
+            if (isAddingStockMode) {
+              submissionData.count = (editingAmmo.count || 0) + (submissionData.count || 0);
+            }
+            await window.api.updateAmmo(editingAmmo.id, submissionData as Ammo);
+            savedId = editingAmmo.id;
+          } else {
+            const duplicate = ammoList.find(
+              (a) =>
+                a.type === submissionData.type &&
+                a.caliber === submissionData.caliber &&
+                a.manufacturer === submissionData.manufacturer &&
+                a.grain === submissionData.grain &&
+                a.projectile === submissionData.projectile
+            );
 
-              <form
-                onSubmit={handleAmmoSubmit}
-                style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-              >
-                {/* Section 1: Basic Barcode & Identification */}
-                <div
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '8px',
-                    padding: '1.25rem',
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: '1rem',
-                      color: 'var(--text-primary)',
-                      marginTop: 0,
-                      marginBottom: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <Package size={16} style={{ color: 'var(--accent)' }} />
-                    Identification &amp; Stock Count
-                  </h3>
+            let merged = false;
+            if (duplicate) {
+              if (
+                window.confirm(
+                  `An existing entry for ${duplicate.manufacturer || ''} ${duplicate.caliber} ${duplicate.grain || ''}gr was found. Would you like to merge this into the existing entry?`
+                )
+              ) {
+                const mergedData = { ...duplicate };
+                mergedData.count = (duplicate.count || 0) + (submissionData.count || 0);
+                if (!mergedData.upc_code && submissionData.upc_code) {
+                  mergedData.upc_code = submissionData.upc_code;
+                }
+                await window.api.updateAmmo(duplicate.id!, mergedData as Ammo);
+                savedId = duplicate.id || null;
+                merged = true;
+              }
+            }
 
-                  <div className="form-group">
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span>UPC / SKU Barcode (Optional)</span>
-                      {formData.upc_code?.trim() && (
-                        <span
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background:
-                              getBarcodeLabelType(formData.upc_code) === 'UPC'
-                                ? 'rgba(56, 189, 248, 0.15)'
-                                : 'rgba(245, 158, 11, 0.15)',
-                            color:
-                              getBarcodeLabelType(formData.upc_code) === 'UPC'
-                                ? '#38bdf8'
-                                : '#fbbf24',
-                            border: `1px solid ${
-                              getBarcodeLabelType(formData.upc_code) === 'UPC'
-                                ? 'rgba(56, 189, 248, 0.3)'
-                                : 'rgba(245, 158, 11, 0.3)'
-                            }`,
-                          }}
-                        >
-                          Detected {getBarcodeLabelType(formData.upc_code)}
-                        </span>
-                      )}
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input
-                        type="text"
-                        className="form-input"
-                        style={{ flex: 1 }}
-                        value={formData.upc_code || ''}
-                        onChange={(e) => setFormData({ ...formData, upc_code: e.target.value })}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            lookupUPC(formData.upc_code || '');
-                          }
-                        }}
-                        onBlur={(e) => lookupUPC(e.target.value)}
-                        placeholder="Scan or type UPC barcode or SKU..."
-                      />
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{ padding: '0.5rem 1rem' }}
-                        onClick={() => lookupUPC(formData.upc_code || '')}
-                      >
-                        Lookup
-                      </button>
-                    </div>
-                    {upcStatus && (
-                      <div
-                        style={{
-                          marginTop: '0.5rem',
-                          fontSize: '0.85rem',
-                          padding: '0.5rem',
-                          borderRadius: '4px',
-                          background:
-                            upcStatus.type === 'success'
-                              ? 'rgba(34, 197, 94, 0.1)'
-                              : upcStatus.type === 'error'
-                                ? 'rgba(239, 68, 68, 0.1)'
-                                : 'rgba(56, 189, 248, 0.1)',
-                          color:
-                            upcStatus.type === 'success'
-                              ? '#4ade80'
-                              : upcStatus.type === 'error'
-                                ? '#f87171'
-                                : '#38bdf8',
-                          border: `1px solid ${upcStatus.type === 'success' ? 'rgba(34, 197, 94, 0.2)' : upcStatus.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)'}`,
-                        }}
-                      >
-                        {upcStatus.message}
-                      </div>
-                    )}
-                  </div>
+            if (!merged) {
+              const res = await window.api.addAmmo(submissionData as Ammo);
+              if (typeof res === 'number') {
+                savedId = res;
+              } else if (res && typeof (res as any).id === 'number') {
+                savedId = (res as any).id;
+              } else {
+                const fresh = await window.api.getAmmo();
+                if (fresh && fresh.length > 0) {
+                  savedId = Math.max(...fresh.map((a: any) => a.id || 0));
+                }
+              }
+            }
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Caliber *</label>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <AutocompleteInput
-                          required
-                          name="caliber"
-                          value={formData.caliber || ''}
-                          onChange={(e) => handleShotgunChange('caliber', e.target.value)}
-                          onBlur={() =>
-                            handleShotgunChange('caliber', formatCaliber(formData.caliber || ''))
-                          }
-                          options={CALIBER_OPTIONS}
-                          placeholder="e.g. 9mm Luger, .45 ACP, .223 Rem"
-                        />
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            cursor: 'pointer',
-                            background: formData.isPlusP
-                              ? 'rgba(239, 68, 68, 0.15)'
-                              : 'rgba(255,255,255,0.05)',
-                            padding: '0.65rem 0.75rem',
-                            borderRadius: '4px',
-                            border: `1px solid ${formData.isPlusP ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.1)'}`,
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!formData.isPlusP}
-                            onChange={(e) =>
-                              setFormData({ ...formData, isPlusP: e.target.checked })
-                            }
-                            style={{ margin: 0 }}
-                          />
-                          <span
-                            style={{
-                              color: formData.isPlusP ? '#ef4444' : 'var(--text-secondary)',
-                              fontWeight: formData.isPlusP ? 'bold' : 'normal',
-                              fontSize: '0.85rem',
-                            }}
-                          >
-                            +P
-                          </span>
-                        </label>
-                      </div>
-                    </div>
+            if (location.state && (location.state as any).syncItemId) {
+              await window.api.removeSyncItem((location.state as any).syncItemId);
+            }
+          }
 
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Total Rounds in Stock *</label>
-                      <input
-                        required
-                        type="number"
-                        className="form-input"
-                        value={formData.count === undefined ? '' : formData.count}
-                        onChange={(e) => {
-                          const cnt =
-                            e.target.value === '' ? ('' as any) : parseInt(e.target.value);
-                          setCalcRds('');
-                          const boxPrice = (formData as any).boxPrice;
-                          let newCPR = formData.costPerRound;
-                          if (boxPrice && typeof cnt === 'number' && cnt > 0) {
-                            newCPR = parseFloat((boxPrice / cnt).toFixed(3));
-                          }
-                          setFormData({ ...formData, count: cnt, costPerRound: newCPR });
-                        }}
-                      />
-                    </div>
-                  </div>
+          // Bi-directional Storage Sync
+          if (savedId && storageLocations.length > 0) {
+            const updatedLocations = assignItemToStorage(
+              'ammo',
+              savedId,
+              locId,
+              storageLocations
+            );
+            await saveStorageLocations(updatedLocations);
+          }
 
-                  {/* Box Calculator helper */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      background: 'rgba(56, 189, 248, 0.06)',
-                      border: '1px solid rgba(56, 189, 248, 0.2)',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '6px',
-                      marginTop: '0.85rem',
-                    }}
-                  >
-                    <Calculator size={16} style={{ color: 'var(--accent)' }} />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Quick Calculator:
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="Rds/Box"
-                      value={calcRds}
-                      style={{
-                        width: '85px',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #3f3f46',
-                        background: '#18181b',
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                      }}
-                      onChange={(e) => {
-                        const rds = e.target.value === '' ? '' : parseInt(e.target.value);
-                        setCalcRds(rds);
-                        const newCount = typeof rds === 'number' ? rds * calcBoxes : formData.count;
-                        const boxPrice = (formData as any).boxPrice;
-                        let newCPR = formData.costPerRound;
-                        if (boxPrice && typeof rds === 'number' && rds > 0) {
-                          newCPR = parseFloat((boxPrice / rds).toFixed(3));
-                        }
-                        setFormData({ ...formData, count: newCount, costPerRound: newCPR });
-                      }}
-                    />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      &times;
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="Boxes"
-                      value={calcBoxes}
-                      style={{
-                        width: '70px',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #3f3f46',
-                        background: '#18181b',
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                      }}
-                      onChange={(e) => {
-                        const boxes = e.target.value === '' ? 1 : parseInt(e.target.value);
-                        setCalcBoxes(boxes);
-                        if (typeof calcRds === 'number') {
-                          setFormData({ ...formData, count: calcRds * boxes });
-                        }
-                      }}
-                    />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Boxes</span>
-                  </div>
+          setIsAmmoModalOpen(false);
+          setIsAddingStockMode(false);
 
-                  <div style={{ marginTop: '0.85rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Storage Location / Ammo Can</label>
-                      <StorageLocationSelect
-                        value={ammoStorageLocationId}
-                        onChange={(locId) => setAmmoStorageLocationId(locId)}
-                        locations={storageLocations}
-                        placeholder="Select Ammo Can / Safe / Shelf..."
-                      />
-                    </div>
-                  </div>
-                </div>
+          if ((location.state as any)?.syncItemId) {
+            window.history.replaceState({}, document.title);
+          }
 
-                {/* Section 2: Ammunition Specifications (Bullet Type, Weight, Make, etc.) */}
-                <div
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '8px',
-                    padding: '1.25rem',
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: '1rem',
-                      color: 'var(--text-primary)',
-                      marginTop: 0,
-                      marginBottom: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <Target size={16} style={{ color: 'var(--accent)' }} />
-                    {formData.type === 'factory'
-                      ? 'Factory Specifications'
-                      : 'Custom Handload Recipe'}
-                  </h3>
-
-                  {formData.type === 'factory' ? (
-                    <>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: '1rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Manufacturer / Brand</label>
-                          <AutocompleteInput
-                            name="manufacturer"
-                            value={formData.manufacturer || ''}
-                            onChange={(e) =>
-                              setFormData({ ...formData, manufacturer: e.target.value })
-                            }
-                            options={AMMO_MANUFACTURERS}
-                            placeholder="e.g. Winchester, Federal, Hornady, Blazer"
-                          />
-                        </div>
-
-                        {isFormShotgun ? (
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>Shell Length</label>
-                            <AutocompleteInput
-                              mode="select"
-                              name="shell_length"
-                              value={formData.shell_length || ''}
-                              onChange={(e) => handleShotgunChange('shell_length', e.target.value)}
-                              options={SHOTGUN_SHELL_LENGTHS}
-                            />
-                          </div>
-                        ) : (
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>Bullet Weight (Grain)</label>
-                            <input
-                              type="number"
-                              className="form-input"
-                              value={formData.grain ?? ''}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  grain:
-                                    e.target.value === '' ? undefined : parseInt(e.target.value),
-                                })
-                              }
-                              placeholder="e.g. 115, 124, 147, 55, 62, 77, 230"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {isFormShotgun ? (
-                        <div
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
-                        >
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label>Shot Size / Slug</label>
-                            <AutocompleteInput
-                              mode="select"
-                              name="shot_size"
-                              value={formData.shot_size || ''}
-                              onChange={(e) => handleShotgunChange('shot_size', e.target.value)}
-                              options={SHOTGUN_SHOT_SIZES}
-                            />
-                          </div>
-
-                          {formData.shot_size?.toLowerCase().includes('buck') ? (
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>Pellet Count</label>
-                              <input
-                                type="number"
-                                className="form-input"
-                                value={formData.pellet_count || ''}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    pellet_count: e.target.value
-                                      ? parseInt(e.target.value)
-                                      : undefined,
-                                  })
-                                }
-                                placeholder="e.g. 8, 9, 12"
-                              />
-                            </div>
-                          ) : (
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label>Payload Weight (oz)</label>
-                              <AutocompleteInput
-                                mode="select"
-                                name="oz_payload"
-                                value={formData.oz_payload || ''}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, oz_payload: e.target.value })
-                                }
-                                options={SHOTGUN_PAYLOADS}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>
-                            Bullet Type / Projectile (e.g. FMJ, JHP, HST, Gold Dot, ELD Match)
-                          </label>
-                          <AutocompleteInput
-                            name="projectile"
-                            value={formData.projectile || ''}
-                            onChange={(e) =>
-                              setFormData({ ...formData, projectile: e.target.value })
-                            }
-                            options={COMPREHENSIVE_BULLET_TYPES}
-                            placeholder="e.g. Full Metal Jacket (FMJ), Jacketed Hollow Point (JHP), HST, MatchKing"
-                          />
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {/* Handload Recipe Fields */}
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr 1fr',
-                          gap: '1rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Bullet Manufacturer</label>
-                          <AutocompleteInput
-                            name="bullet_manufacturer"
-                            value={formData.bullet_manufacturer || ''}
-                            onChange={(e) =>
-                              setFormData({ ...formData, bullet_manufacturer: e.target.value })
-                            }
-                            options={BULLET_MANUFACTURERS}
-                            placeholder="e.g. Sierra, Hornady, Nosler"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Bullet Weight (Grain)</label>
-                          <input
-                            type="number"
-                            className="form-input"
-                            value={formData.grain ?? ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                grain: e.target.value === '' ? undefined : parseInt(e.target.value),
-                              })
-                            }
-                            placeholder="e.g. 77, 124, 168"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Bullet Type</label>
-                          <AutocompleteInput
-                            name="projectile"
-                            value={formData.projectile || ''}
-                            onChange={(e) =>
-                              setFormData({ ...formData, projectile: e.target.value })
-                            }
-                            options={COMPREHENSIVE_BULLET_TYPES}
-                            placeholder="e.g. TMK, BTHP, V-Max"
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr 1fr',
-                          gap: '1rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Powder</label>
-                          <AutocompleteInput
-                            name="powder"
-                            value={formData.powder || ''}
-                            onChange={(e) => setFormData({ ...formData, powder: e.target.value })}
-                            options={COMMON_POWDERS}
-                            placeholder="e.g. Varget, CFE 223, Titegroup"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Charge (Grains)</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            className="form-input"
-                            value={formData.powderCharge ?? ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                powderCharge:
-                                  e.target.value === '' ? undefined : parseFloat(e.target.value),
-                              })
-                            }
-                            placeholder="e.g. 24.5"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Overall Length (OAL)</label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            className="form-input"
-                            value={formData.oal ?? ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                oal: e.target.value === '' ? undefined : parseFloat(e.target.value),
-                              })
-                            }
-                            placeholder='e.g. 2.260"'
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}
-                      >
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Primer Type</label>
-                          <AutocompleteInput
-                            name="primer_type"
-                            value={formData.primer_type || ''}
-                            onChange={(e) =>
-                              setFormData({ ...formData, primer_type: e.target.value })
-                            }
-                            options={PRIMER_TYPES}
-                            placeholder="e.g. Small Rifle, Large Pistol"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Primer Model</label>
-                          <AutocompleteInput
-                            name="primer"
-                            value={formData.primer || ''}
-                            onChange={(e) => setFormData({ ...formData, primer: e.target.value })}
-                            options={COMMON_PRIMERS}
-                            placeholder="e.g. CCI #400, Fed 205M"
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Brass / Casing Make</label>
-                          <AutocompleteInput
-                            name="brass"
-                            value={formData.brass || ''}
-                            onChange={(e) => setFormData({ ...formData, brass: e.target.value })}
-                            options={BRASS_MAKES}
-                            placeholder="e.g. Starline, Lake City"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Section 3: Financials & Stock Alert Thresholds */}
-                <div
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '8px',
-                    padding: '1.25rem',
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: '1rem',
-                      color: 'var(--text-primary)',
-                      marginTop: 0,
-                      marginBottom: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <DollarSign size={16} style={{ color: 'var(--success)' }} />
-                    Financials &amp; Threshold Alerts
-                  </h3>
-
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '1rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>
-                        Box Purchase Price ($){' '}
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-secondary)',
-                            fontWeight: 'normal',
-                          }}
-                        >
-                          (Auto-calcs CPR)
-                        </span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="form-input"
-                        value={(formData as any).boxPrice ?? ''}
-                        onChange={(e) => {
-                          const valStr = e.target.value;
-                          const val = parseFloat(valStr);
-                          if (!isNaN(val)) {
-                            const divisor =
-                              typeof calcRds === 'number' && calcRds > 0
-                                ? calcRds
-                                : formData.count && formData.count > 0
-                                  ? formData.count
-                                  : 0;
-
-                            const cpr =
-                              divisor > 0
-                                ? parseFloat((val / divisor).toFixed(3))
-                                : formData.costPerRound;
-                            setFormData({ ...formData, boxPrice: val, costPerRound: cpr } as any);
-                          } else {
-                            setFormData({
-                              ...formData,
-                              boxPrice: valStr === '' ? undefined : (val as any),
-                            } as any);
-                          }
-                        }}
-                        placeholder="e.g. 24.99"
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Cost Per Round ($)</label>
-                      <input
-                        type="number"
-                        step="0.001"
-                        className="form-input"
-                        value={formData.costPerRound ?? ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            costPerRound:
-                              e.target.value === '' ? undefined : parseFloat(e.target.value),
-                          })
-                        }
-                        placeholder="e.g. 0.35"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Target Stock Goal (Rounds)</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        value={formData.target_stock_goal ?? ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            target_stock_goal:
-                              e.target.value === '' ? undefined : parseInt(e.target.value),
-                          })
-                        }
-                        placeholder="e.g. 1,000"
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Low Stock Alert Threshold (Rounds)</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        value={formData.min_threshold || formData.low_stock_threshold || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            min_threshold:
-                              e.target.value === '' ? undefined : parseInt(e.target.value),
-                            low_stock_threshold:
-                              e.target.value === '' ? undefined : parseInt(e.target.value),
-                          })
-                        }
-                        placeholder="e.g. 200"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 4: Notes */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Notes / Description</label>
-                  <textarea
-                    className="form-input"
-                    rows={2}
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Lot numbers, storage location, ammo can ID, velocity telemetry..."
-                  />
-                </div>
-
-                <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsAmmoModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-primary">
-                    Save Ammunition
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
+          loadData();
+        }}
+        editingAmmo={editingAmmo}
+        isAddingStockMode={isAddingStockMode}
+        initialType={activeAmmoTab === 'handload' ? 'handload' : 'factory'}
+        initialUpc={formData.upc_code}
+        storageLocations={storageLocations}
+        ammoList={ammoList}
+        onSwitchToComponents={() => {
+          setActiveDepotView('reloading');
+          openAddComponentModal();
+        }}
+      />
 
       {/* Inspecting Ammo Details Dossier Modal */}
       {inspectingAmmo &&

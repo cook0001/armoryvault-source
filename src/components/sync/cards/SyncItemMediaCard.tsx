@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, PlusCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Crosshair, PlusCircle, RefreshCw, Trash2 } from 'lucide-react';
 import React from 'react';
 import type { Firearm, SyncItem } from '../../../types';
 
@@ -21,6 +21,127 @@ export const SyncItemMediaCard: React.FC<SyncItemMediaCardProps> = ({
 }) => {
   if (item.type === 'universal_scan') {
     const upcOrId = String(item.upcOrId);
+
+    let handloadPreview: any = null;
+    if (upcOrId.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(upcOrId.trim());
+        if (
+          parsed.type === 'handload' ||
+          parsed.source === 'LoadBench' ||
+          parsed.app === 'ArmoryVault' ||
+          parsed.format === 'load_project'
+        ) {
+          handloadPreview = parsed;
+        }
+      } catch {}
+    }
+
+    if (handloadPreview) {
+      const cal = handloadPreview.cal || handloadPreview.caliber || handloadPreview.cartridge?.name || 'Handload';
+      const bullet = handloadPreview.bullet || handloadPreview.projectile?.name || `${handloadPreview.grain || ''}gr`;
+      const powder = handloadPreview.powder || handloadPreview.powder_name || handloadPreview.propellant?.name || '';
+      const primer = handloadPreview.primer?.name || handloadPreview.primer || '';
+      const lot = handloadPreview.lot || handloadPreview.lotNumber;
+      const count = handloadPreview.count || handloadPreview.quantity || 50;
+      const fps = handloadPreview.fps || handloadPreview.simulated?.muzzleVelocityFps;
+      const psi = handloadPreview.psi || handloadPreview.simulated?.maxPressurePsi;
+
+      const specDetails = [
+        powder ? `Powder: ${powder}` : '',
+        primer ? `Primer: ${primer}` : '',
+        fps ? `${fps} fps` : '',
+        psi ? `${psi} psi` : '',
+        lot ? `Lot #${lot}` : '',
+      ].filter(Boolean).join(' • ');
+
+      return (
+        <div
+          key={item.id}
+          className="card"
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '1.5rem',
+            borderLeft: '4px solid #10b981',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.5rem',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                }}
+              >
+                LoadBench Handload Batch
+              </span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                {new Date(item.timestamp).toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontSize: '1.1rem',
+                  margin: '0 0 0.25rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <Crosshair size={18} style={{ color: '#10b981' }} />
+                {cal} {bullet} ({count} rounds)
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {specDetails || 'LoadBench simulated handload recipe'}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="btn-primary"
+              onClick={() => onResolveUniversal(item)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#10b981', borderColor: '#10b981' }}
+              disabled={isResolving}
+            >
+              {isResolving ? <RefreshCw size={16} className="spin" /> : <PlusCircle size={16} />}
+              {isResolving ? 'Accepting...' : 'Accept Handload Batch'}
+            </button>
+            <button
+              className="btn-icon"
+              onClick={() => onDelete(item.id!)}
+              style={{ color: 'var(--danger)' }}
+              title="Delete"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         key={item.id}

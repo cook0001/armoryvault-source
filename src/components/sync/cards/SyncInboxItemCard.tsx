@@ -5,6 +5,7 @@ import { SyncItemFirearmCard } from './SyncItemFirearmCard';
 import { SyncItemLogCard } from './SyncItemLogCard';
 import { SyncItemMediaCard } from './SyncItemMediaCard';
 import { SyncItemSessionCard } from './SyncItemSessionCard';
+import { SyncItemPayloadCard } from './SyncItemPayloadCard';
 
 export interface SyncInboxItemCardProps {
   item: SyncItem;
@@ -88,6 +89,16 @@ export const SyncInboxItemCard: React.FC<SyncInboxItemCardProps> = (props) => {
         onApprove={props.onApprove}
         onDelete={props.onDelete}
         getFirearmMaintenanceWarning={props.getFirearmMaintenanceWarning}
+      />
+    );
+  }
+
+  if (item.type === 'custom_payload') {
+    return (
+      <SyncItemPayloadCard
+        item={item}
+        onDelete={props.onDelete}
+        onApproveSuccess={() => props.onApprove(item)}
       />
     );
   }

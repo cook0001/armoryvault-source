@@ -1,7 +1,13 @@
-import { AlertTriangle, CheckCircle, Layers, Package, Scale, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Sparkles, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AutocompleteInput } from '@/components/AutocompleteInput';
+import {
+  BrassCaseIcon,
+  BulletProjectileIcon,
+  GunpowderIcon,
+  PrimerIcon,
+} from '@/components/CustomIcons';
 import { Ammo, ReloadingComponent } from '@/types';
 import { formatPowderMultiUnit, toGrains } from '@/utils/powderUnits';
 
@@ -143,9 +149,6 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
   const bulletComp = components.find((c) => c.id === selectedBulletId);
   const bulletHasShortage = bulletComp ? (bulletComp.quantity || 0) < batchQuantity : false;
 
-  const anyShortage =
-    powderHasShortage || primerHasShortage || brassHasShortage || bulletHasShortage;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (batchQuantity <= 0) return;
@@ -188,90 +191,48 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '680px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.25rem',
-            borderBottom: '1px solid var(--border-light)',
-            paddingBottom: '0.75rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={22} style={{ color: 'var(--accent)' }} />
+      <div className="modal-container modal-container-md" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="modal-header">
+          <div className="flex items-center gap-3">
+            <div className="modal-header-icon-badge">
+              <Sparkles size={20} className="text-amber-400" />
+            </div>
             <div>
-              <h3 style={{ margin: 0 }}>Assemble Handload Batch</h3>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <h2 className="modal-title">Assemble Handload Batch</h2>
+              <p className="modal-subtitle">
                 {ammo.caliber} &bull; {ammo.grain ? `${ammo.grain}gr ` : ''}
                 {ammo.projectile || 'Bullet'} ({ammo.powder || 'Powder'}{' '}
                 {ammo.powderCharge ? `${ammo.powderCharge}gr` : ''})
-              </div>
+              </p>
             </div>
           </div>
-          <button className="btn-icon" onClick={onClose}>
-            ×
+          <button type="button" className="btn-icon" onClick={onClose} title="Close">
+            <X size={20} />
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem',
-            overflowY: 'auto',
-            flex: 1,
-            paddingRight: '0.25rem',
-          }}
-        >
-          {/* Batch Quantity Selector */}
-          <div
-            style={{
-              background: 'rgba(56, 189, 248, 0.08)',
-              padding: '1rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
+        {/* Body Form */}
+        <form onSubmit={handleSubmit} className="modal-body flex flex-col gap-4">
+          {/* Batch Quantity Selector Banner */}
+          <div className="batch-qty-banner">
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.2rem',
-                }}
-              >
+              <label className="batch-qty-title">
                 Batch Quantity (Rounds to Assemble)
               </label>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <div className="batch-qty-sub">
                 Will add +{batchQuantity} rounds to finished stock and deduct required components.
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+            <div className="batch-qty-controls">
               {[50, 100, 250, 500].map((qty) => (
                 <button
                   key={qty}
                   type="button"
                   onClick={() => setBatchQuantity(qty)}
-                  className={batchQuantity === qty ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
+                  className={`batch-qty-btn ${batchQuantity === qty ? 'active' : ''}`}
                 >
                   {qty}
                 </button>
@@ -280,13 +241,7 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                 type="number"
                 min="1"
                 step="1"
-                className="form-input"
-                style={{
-                  width: '90px',
-                  padding: '0.35rem 0.6rem',
-                  textAlign: 'center',
-                  fontWeight: 700,
-                }}
+                className="form-input batch-qty-input"
                 value={batchQuantity}
                 onChange={(e) => setBatchQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 required
@@ -294,67 +249,34 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
             </div>
           </div>
 
-          {/* Component Deduction Table */}
-          <div>
-            <div
-              style={{
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginBottom: '0.6rem',
-              }}
-            >
-              Component Inventory Depletion Breakdown
+          {/* Component Inventory Depletion Breakdown Section */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <h3 className="form-section-title">Component Inventory Depletion Breakdown</h3>
+                <p className="form-section-desc">
+                  Select and verify components to be consumed from your stock
+                </p>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="flex flex-col gap-3">
               {/* 1. Powder */}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: powderHasShortage
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid var(--border-light)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.4rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Scale size={16} style={{ color: '#fbbf24' }} />
-                    <strong style={{ fontSize: '0.9rem' }}>
+              <div className={`batch-comp-card ${powderHasShortage ? 'shortage' : ''}`}>
+                <div className="batch-comp-header">
+                  <div className="batch-comp-title-wrap">
+                    <GunpowderIcon size={18} color="#fbbf24" />
+                    <span className="batch-comp-name">
                       Gunpowder: {ammo.powder || 'N/A'}
-                    </strong>
+                    </span>
                   </div>
                   {chargeGrains > 0 && (
-                    <span
-                      style={{
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: powderHasShortage ? '#ef4444' : 'var(--accent)',
-                      }}
-                    >
+                    <span className={`batch-comp-req ${powderHasShortage ? 'shortage' : ''}`}>
                       Need: {powderNeededDisplay}
                     </span>
                   )}
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.5fr 1fr',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="batch-comp-grid">
                   <AutocompleteInput
                     mode="select"
                     name="powderCompId"
@@ -372,23 +294,10 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                         })),
                     ]}
                   />
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: powderHasShortage ? '#ef4444' : 'var(--text-secondary)',
-                      textAlign: 'right',
-                    }}
-                  >
+                  <div className="batch-comp-status">
                     {powderComp ? (
                       powderHasShortage ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span className="batch-comp-status shortage">
                           <AlertTriangle size={14} /> Shortage (Have{' '}
                           {
                             formatPowderMultiUnit(powderComp.quantity || 0, powderComp.weightUnit)
@@ -397,14 +306,7 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                           )
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            color: '#4ade80',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                          }}
-                        >
+                        <span className="batch-comp-status ok">
                           <CheckCircle size={14} /> In Stock (
                           {
                             formatPowderMultiUnit(powderComp.quantity || 0, powderComp.weightUnit)
@@ -421,48 +323,19 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
               </div>
 
               {/* 2. Primers */}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: primerHasShortage
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid var(--border-light)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.4rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Layers size={16} style={{ color: '#38bdf8' }} />
-                    <strong style={{ fontSize: '0.9rem' }}>
+              <div className={`batch-comp-card ${primerHasShortage ? 'shortage' : ''}`}>
+                <div className="batch-comp-header">
+                  <div className="batch-comp-title-wrap">
+                    <PrimerIcon size={18} color="#38bdf8" />
+                    <span className="batch-comp-name">
                       Primers: {ammo.primer || ammo.primer_type || 'N/A'}
-                    </strong>
+                    </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: primerHasShortage ? '#ef4444' : 'var(--accent)',
-                    }}
-                  >
+                  <span className={`batch-comp-req ${primerHasShortage ? 'shortage' : ''}`}>
                     Need: {batchQuantity.toLocaleString()} primers
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.5fr 1fr',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="batch-comp-grid">
                   <AutocompleteInput
                     mode="select"
                     name="primerCompId"
@@ -480,34 +353,14 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                         })),
                     ]}
                   />
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: primerHasShortage ? '#ef4444' : 'var(--text-secondary)',
-                      textAlign: 'right',
-                    }}
-                  >
+                  <div className="batch-comp-status">
                     {primerComp ? (
                       primerHasShortage ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span className="batch-comp-status shortage">
                           <AlertTriangle size={14} /> Shortage (Have {primerComp.quantity || 0})
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            color: '#4ade80',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                          }}
-                        >
+                        <span className="batch-comp-status ok">
                           <CheckCircle size={14} /> In Stock ({primerComp.quantity || 0})
                         </span>
                       )
@@ -519,48 +372,19 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
               </div>
 
               {/* 3. Brass / Cases */}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: brassHasShortage
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid var(--border-light)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.4rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Package size={16} style={{ color: '#c084fc' }} />
-                    <strong style={{ fontSize: '0.9rem' }}>
+              <div className={`batch-comp-card ${brassHasShortage ? 'shortage' : ''}`}>
+                <div className="batch-comp-header">
+                  <div className="batch-comp-title-wrap">
+                    <BrassCaseIcon size={18} color="#c084fc" />
+                    <span className="batch-comp-name">
                       Brass / Cases: {ammo.brass || ammo.caliber}
-                    </strong>
+                    </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: brassHasShortage ? '#ef4444' : 'var(--accent)',
-                    }}
-                  >
+                  <span className={`batch-comp-req ${brassHasShortage ? 'shortage' : ''}`}>
                     Need: {batchQuantity.toLocaleString()} cases
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.5fr 1fr',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="batch-comp-grid">
                   <AutocompleteInput
                     mode="select"
                     name="brassCompId"
@@ -578,34 +402,14 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                         })),
                     ]}
                   />
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: brassHasShortage ? '#ef4444' : 'var(--text-secondary)',
-                      textAlign: 'right',
-                    }}
-                  >
+                  <div className="batch-comp-status">
                     {brassComp ? (
                       brassHasShortage ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span className="batch-comp-status shortage">
                           <AlertTriangle size={14} /> Shortage (Have {brassComp.quantity || 0})
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            color: '#4ade80',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                          }}
-                        >
+                        <span className="batch-comp-status ok">
                           <CheckCircle size={14} /> In Stock ({brassComp.quantity || 0})
                         </span>
                       )
@@ -617,50 +421,21 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
               </div>
 
               {/* 4. Bullets / Projectiles */}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: bulletHasShortage
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid var(--border-light)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.4rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Sparkles size={16} style={{ color: '#f59e0b' }} />
-                    <strong style={{ fontSize: '0.9rem' }}>
+              <div className={`batch-comp-card ${bulletHasShortage ? 'shortage' : ''}`}>
+                <div className="batch-comp-header">
+                  <div className="batch-comp-title-wrap">
+                    <BulletProjectileIcon size={18} color="#f59e0b" />
+                    <span className="batch-comp-name">
                       Projectiles: {ammo.bullet_manufacturer ? `${ammo.bullet_manufacturer} ` : ''}
                       {ammo.grain ? `${ammo.grain}gr ` : ''}
                       {ammo.projectile || ''}
-                    </strong>
+                    </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: bulletHasShortage ? '#ef4444' : 'var(--accent)',
-                    }}
-                  >
+                  <span className={`batch-comp-req ${bulletHasShortage ? 'shortage' : ''}`}>
                     Need: {batchQuantity.toLocaleString()} bullets
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.5fr 1fr',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="batch-comp-grid">
                   <AutocompleteInput
                     mode="select"
                     name="bulletCompId"
@@ -678,34 +453,14 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
                         })),
                     ]}
                   />
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: bulletHasShortage ? '#ef4444' : 'var(--text-secondary)',
-                      textAlign: 'right',
-                    }}
-                  >
+                  <div className="batch-comp-status">
                     {bulletComp ? (
                       bulletHasShortage ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span className="batch-comp-status shortage">
                           <AlertTriangle size={14} /> Shortage (Have {bulletComp.quantity || 0})
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            color: '#4ade80',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                          }}
-                        >
+                        <span className="batch-comp-status ok">
                           <CheckCircle size={14} /> In Stock ({bulletComp.quantity || 0})
                         </span>
                       )
@@ -718,15 +473,8 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div
-            className="modal-actions"
-            style={{
-              marginTop: '0.5rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--border-light)',
-            }}
-          >
+          {/* Action Footer */}
+          <div className="modal-footer">
             <button
               type="button"
               className="btn-secondary"
@@ -737,11 +485,10 @@ export const BatchManufactureModal: React.FC<BatchManufactureModalProps> = ({
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className="btn-primary flex items-center gap-2"
               disabled={isSubmitting || batchQuantity <= 0}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <Sparkles size={16} />{' '}
+              <Sparkles size={16} />
               {isSubmitting ? 'Assembling...' : `Manufacture Batch (+${batchQuantity} Rds)`}
             </button>
           </div>

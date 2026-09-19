@@ -1,6 +1,13 @@
-import { X } from 'lucide-react';
+import { Package, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  AmmoCanIcon,
+  CabinetIcon,
+  GunCaseIcon,
+  SafeIcon,
+  VehicleVaultIcon,
+} from '@/components/CustomIcons';
 import type { StorageLocation } from '../../../types';
 
 export interface StorageLocationFormModalProps {
@@ -47,229 +54,164 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
 
   if (!isOpen) return null;
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!form.name?.trim()) return;
     await onSave(form);
   };
 
+  const locationTypes: Array<{
+    type: StorageLocation['type'];
+    label: string;
+    icon: React.ReactNode;
+  }> = [
+    { type: 'Safe', label: 'Gun Safe', icon: <SafeIcon size={16} /> },
+    { type: 'Cabinet', label: 'Security Cabinet', icon: <CabinetIcon size={16} /> },
+    { type: 'AmmoCan', label: 'Ammo Can / Depot', icon: <AmmoCanIcon size={16} /> },
+    { type: 'Case', label: 'Hard Travel Case', icon: <GunCaseIcon size={16} /> },
+    { type: 'Vehicle', label: 'Vehicle Safe', icon: <VehicleVaultIcon size={16} /> },
+    { type: 'Other', label: 'Other', icon: <Package size={16} /> },
+  ];
+
   return createPortal(
-    <div
-      className="modal-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.7)',
-        backdropFilter: 'blur(16px)',
-      }}
-    >
+    <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
+        className="modal-container"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: '480px',
-          width: '90vw',
-          background: 'var(--card-bg)',
-          border: '1px solid var(--border-light)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-        }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1rem',
-          }}
-        >
-          <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.15rem' }}>
-            {editingLocation ? 'Edit Storage Location' : 'Add Storage Location'}
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={20} />
+        <div className="modal-header">
+          <div className="modal-header-title">
+            <SafeIcon size={22} color="var(--accent)" />
+            <div className="modal-header-text">
+              <h2>{editingLocation ? 'Edit Storage Location' : 'Add Storage Location'}</h2>
+              <p>Configure armory containers, capacity modes & access combinations</p>
+            </div>
+          </div>
+          <button type="button" className="btn-icon" onClick={onClose} title="Close dialog">
+            <X size={18} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          <div>
-            <label
-              style={{
-                display: 'block',
-                color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                marginBottom: 4,
-              }}
-            >
-              Location Name
-            </label>
-            <input
-              className="glass-input"
-              value={form.name || ''}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Main Gun Safe, Master Bedroom Safe"
-            />
+        <form onSubmit={handleSubmit} className="modal-body">
+          {/* Storage Type Segmented Selector */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <SafeIcon size={16} color="var(--accent)" />
+                <h4 className="form-section-title">Storage Container Type</h4>
+              </div>
+            </div>
+
+            <div className="form-type-selector">
+              {locationTypes.map((t) => (
+                <button
+                  key={t.type}
+                  type="button"
+                  className={`form-type-btn ${form.type === t.type ? 'active' : ''}`}
+                  onClick={() => setForm((prev) => ({ ...prev, type: t.type }))}
+                >
+                  {t.icon}
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div>
-            <label
-              style={{
-                display: 'block',
-                color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                marginBottom: 4,
-              }}
-            >
-              Storage Type
-            </label>
-            <select
-              className="glass-input"
-              value={form.type || 'Safe'}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, type: e.target.value as StorageLocation['type'] }))
-              }
-            >
-              <option value="Safe">Safe</option>
-              <option value="Cabinet">Cabinet</option>
-              <option value="AmmoCan">Ammo Can</option>
-              <option value="Case">Case</option>
-              <option value="Vehicle">Vehicle</option>
-              <option value="Other">Other</option>
-            </select>
+          {/* Core Location Details */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Package size={16} className="text-accent" />
+                <h4 className="form-section-title">Location & Capacity</h4>
+              </div>
+            </div>
+
+            <div className="form-grid-2col">
+              <div className="form-group">
+                <label>Location / Container Name *</label>
+                <input
+                  required
+                  className="form-input"
+                  value={form.name || ''}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Master Bedroom Safe, Liberty Colonial 50"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Capacity Tracking Mode</label>
+                <select
+                  className="form-input"
+                  value={
+                    form.capacityMode ||
+                    (form.type === 'AmmoCan' ? 'ammo' : form.type === 'Other' ? 'all' : 'firearms')
+                  }
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      capacityMode: e.target.value as 'firearms' | 'ammo' | 'all',
+                    }))
+                  }
+                >
+                  <option value="firearms">Firearms Only (Standard for Safes & Cabinets)</option>
+                  <option value="ammo">Ammunition Lots / Boxes (Standard for Ammo Cans)</option>
+                  <option value="all">All Stored Items Combined (Firearms + Accs + Ammo)</option>
+                </select>
+                <span className="form-hint">
+                  {form.capacityMode === 'all'
+                    ? 'Counts all stored firearms, accessories, ammo, and powder canisters.'
+                    : form.capacityMode === 'ammo' || form.type === 'AmmoCan'
+                      ? 'Counts only ammunition lots/boxes towards the storage limit.'
+                      : 'Counts only firearms towards the capacity limit.'}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-grid-2col">
+              <div className="form-group">
+                <label>Capacity Limit (Units)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="1"
+                  value={form.capacity ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      capacity: e.target.value === '' ? undefined : Number(e.target.value),
+                    }))
+                  }
+                  placeholder={
+                    form.capacityMode === 'ammo' || form.type === 'AmmoCan'
+                      ? 'e.g. 10 (Ammo Boxes)'
+                      : form.capacityMode === 'all'
+                        ? 'e.g. 50 (Total Items)'
+                        : 'e.g. 24 (Gun Slots)'
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notes & Access Details</label>
+                <input
+                  className="form-input"
+                  value={form.notes || ''}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder="Key lock, electronic dial, interior shelf layout..."
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label
-              style={{
-                display: 'block',
-                color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                marginBottom: 4,
-              }}
-            >
-              Capacity Tracking Mode
-            </label>
-            <select
-              className="glass-input"
-              value={
-                form.capacityMode ||
-                (form.type === 'AmmoCan' ? 'ammo' : form.type === 'Other' ? 'all' : 'firearms')
-              }
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  capacityMode: e.target.value as 'firearms' | 'ammo' | 'all',
-                }))
-              }
-            >
-              <option value="firearms">Firearms / Guns Only (Standard for Safes & Cabinets)</option>
-              <option value="ammo">Ammunition Lots / Boxes (Standard for Ammo Cans)</option>
-              <option value="all">
-                All Stored Items Combined (Firearms + Accs + Ammo + Powders)
-              </option>
-            </select>
-            <span
-              style={{
-                fontSize: '0.72rem',
-                color: 'var(--text-muted)',
-                marginTop: '2px',
-                display: 'block',
-              }}
-            >
-              {form.capacityMode === 'all'
-                ? 'Counts all stored firearms, accessories, ammunition lots, and reloading powders.'
-                : form.capacityMode === 'ammo' || form.type === 'AmmoCan'
-                  ? 'Counts only ammunition lots/boxes towards the capacity limit.'
-                  : 'Counts only firearms towards the capacity limit. Accessories & ammo can be stored without filling gun slots.'}
-            </span>
+          <div className="modal-footer">
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              {editingLocation ? 'Update Location' : 'Save Location'}
+            </button>
           </div>
-
-          <div>
-            <label
-              style={{
-                display: 'block',
-                color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                marginBottom: 4,
-              }}
-            >
-              Capacity Limit (Optional)
-            </label>
-            <input
-              className="glass-input"
-              type="number"
-              value={form.capacity ?? ''}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  capacity: e.target.value === '' ? undefined : Number(e.target.value),
-                }))
-              }
-              placeholder={
-                form.capacityMode === 'ammo' || form.type === 'AmmoCan'
-                  ? 'e.g. 10 (Ammo Lots / Boxes)'
-                  : form.capacityMode === 'all' || form.type === 'Other'
-                    ? 'e.g. 50 (Total Stored Items)'
-                    : form.type === 'Case'
-                      ? 'e.g. 2 (Handguns or Long Guns)'
-                      : 'e.g. 24 (Gun Capacity)'
-              }
-            />
-          </div>
-
-          <div>
-            <label
-              style={{
-                display: 'block',
-                color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                marginBottom: 4,
-              }}
-            >
-              Notes & Combination Details
-            </label>
-            <textarea
-              className="glass-input"
-              rows={3}
-              value={form.notes || ''}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="Combination backup, shelf layout, location details, etc."
-            />
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.75rem',
-            marginTop: '1.5rem',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <button className="btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn-primary" onClick={handleSubmit}>
-            {editingLocation ? 'Update Location' : 'Add Location'}
-          </button>
-        </div>
+        </form>
       </div>
     </div>,
     document.body

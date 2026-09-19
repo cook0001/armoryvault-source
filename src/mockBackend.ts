@@ -588,13 +588,30 @@ export function setupMockBackend() {
       }),
       getPairingToken: async () => 'mock-pairing-token-1234567890abcdef',
       revokePairingToken: async () => true,
+      getPairedDevices: async () => [
+        {
+          id: 'mock-device-companion',
+          deviceName: 'Mobile Companion (Demo)',
+          deviceType: 'ios',
+          ipAddress: '192.168.1.189',
+          pairedAt: new Date().toISOString(),
+          lastActiveAt: new Date().toISOString(),
+          isActive: true,
+        },
+      ],
+      removePairedDevice: async () => true,
+      unpairAllDevices: async () => true,
       onSyncReceived: (callback: () => void) => () => {},
       onDevicePaired:
         (callback: (data: { deviceName?: string; timestamp?: number }) => void) => () => {},
+      onDeviceUnpaired: (callback: (data: any) => void) => () => {},
       onVaultLocked: (callback: () => void) => () => {},
       getSyncQueue: async () => [],
-      removeSyncItem: async (id: number) => 1,
+      removeSyncItem: async (id: number | string) => (typeof id === 'number' ? id : 1),
       clearSyncQueue: async () => true,
+      rejectSyncItem: async () => 'mock-rejection-id',
+      getRejectedSyncs: async () => [],
+      confirmRejectedSyncs: async () => 0,
 
       // ── Storage Locations ──
       getStorageLocations: async () => [],

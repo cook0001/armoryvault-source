@@ -1,52 +1,37 @@
 import {
   AlertCircle,
-  Camera,
-  Disc,
-  Edit,
-  Eye,
-  Flashlight,
-  Layers,
-  Link as LinkIcon,
+  DollarSign,
   Package,
   PlusCircle,
   Search,
-  Shield,
-  Target,
-  Trash2,
+  X,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChassisIcon,
-  GunBeltIcon,
   HolsterIcon,
   MagazineIcon,
   PicatinnyMountIcon,
   ScopeIcon,
   StockIcon,
   SuppressorIcon,
-  TacticalSlingIcon,
 } from '../components/CustomIcons';
-import {
-  AccessoryDetailModal,
-  getAccessoryTypeColor,
-} from '../components/modals/AccessoryDetailModal';
+import { AccessoryCard } from '../components/accessories/AccessoryCard';
+import { AccessoryDetailModal } from '../components/modals/AccessoryDetailModal';
 import { AccessoryModal } from '../components/modals/AccessoryModal';
-import { StorageBadge } from '../components/StorageBadge';
 import { useUndoToast } from '../components/UndoToast';
 import { useVaultData } from '../context/VaultDataContext';
 import { Accessory, Firearm, StorageLocation } from '../types';
 import { formatCurrency, parseCurrency } from '../utils/currency';
-import { getLocalImageUrl } from '../utils/imageUrl';
 import {
-  getItemStorageLocation,
   removeItemFromAllStorage,
   saveStorageLocations,
 } from '../utils/StorageSync';
 import { buildStorageIndex } from '../utils/storageIndex';
 import { getStoredTheme, maskValue, ThemeConfig } from '../utils/themeEngine';
 
-export const Accessories = () => {
+export const Accessories: React.FC = () => {
   const { showUndo } = useUndoToast();
   const [themeConfig, setThemeConfig] = useState<ThemeConfig>(() => getStoredTheme());
   const {
@@ -67,12 +52,32 @@ export const Accessories = () => {
 
   const [selectedLocationId, setSelectedLocationId] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<
+    | 'all'
+    | 'optics'
+    | 'suppressors'
+    | 'magazines'
+    | 'holsters'
+    | 'lights'
+    | 'mounts'
+    | 'stocks'
+    | 'mounted'
+    | 'unmounted'
+  >('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedAccessoryForDetail, setSelectedAccessoryForDetail] = useState<Accessory | null>(
     null
   );
+
+  const [formData, setFormData] = useState<Partial<Accessory>>({});
+  const [visibleCount, setVisibleCount] = useState(36);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const locationProcessed = useRef<string | null>(null);
 
   useEffect(() => {
     const handleThemeChange = (e: Event) => {
@@ -85,22 +90,9 @@ export const Accessories = () => {
     return () => window.removeEventListener('armoryvault-theme-change', handleThemeChange);
   }, []);
 
-  const [activeTab, setActiveTab] = useState<
-    'all' | 'unmounted' | 'mounted' | 'nfa' | 'optics' | 'stocks' | 'belts' | 'magazines'
-  >('all');
-
-  const [formData, setFormData] = useState<Partial<Accessory>>({});
-
-  const [visibleCount, setVisibleCount] = useState(36);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const location = useLocation();
-  const navigate = useNavigate();
-  const locationProcessed = useRef<string | null>(null);
-
   useEffect(() => {
     setVisibleCount(36);
-  }, [search, selectedLocationId]);
+  }, [search, selectedLocationId, activeTab]);
 
   useEffect(() => {
     loadData();
@@ -145,64 +137,12 @@ export const Accessories = () => {
       setFirearms(fetchedFirearms || []);
       setLocations(locs || []);
 
-      // Keep detail modal synchronized if an item was updated
       if (selectedAccessoryForDetail && fetchedAcc) {
         const refreshed = fetchedAcc.find((a) => a.id === selectedAccessoryForDetail.id);
         setSelectedAccessoryForDetail(refreshed || null);
       }
     }
   };
-
-  const filteredAccessories = useMemo(() => {
-    const term = search.toLowerCase();
-    return accessories.filter((a) => {
-      if (term) {
-        const matchesSearch =
-          a.manufacturer.toLowerCase().includes(term) ||
-          a.model.toLowerCase().includes(term) ||
-          a.type.toLowerCase().includes(term) ||
-          (a.stockType && a.stockType.toLowerCase().includes(term)) ||
-          (a.actionInlet && a.actionInlet.toLowerCase().includes(term)) ||
-          (a.bufferTubeType && a.bufferTubeType.toLowerCase().includes(term)) ||
-          (a.beltType && a.beltType.toLowerCase().includes(term)) ||
-          (a.dropLoopType && a.dropLoopType.toLowerCase().includes(term)) ||
-          (a.cartridgeLoopCaliber && a.cartridgeLoopCaliber.toLowerCase().includes(term)) ||
-          (a.upc_code && a.upc_code.toLowerCase().includes(term)) ||
-          (a.serialNumber && a.serialNumber.toLowerCase().includes(term)) ||
-          (a.supportedModels && a.supportedModels.toLowerCase().includes(term));
-
-        if (!matchesSearch) return false;
-      }
-
-      if (selectedLocationId === 'ALL') return true;
-      const loc = storageIndex.getLocation('accessory', a.id);
-      if (selectedLocationId === 'UNASSIGNED') {
-        return !loc;
-      }
-      return loc?.id === Number(selectedLocationId);
-    });
-  }, [accessories, search, selectedLocationId, storageIndex]);
-
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') {
-      setVisibleCount(filteredAccessories.length);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + 36, filteredAccessories.length));
-        }
-      },
-      { rootMargin: '400px' }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [filteredAccessories.length]);
 
   const handleEdit = (acc: Accessory) => {
     setFormData(acc);
@@ -240,13 +180,7 @@ export const Accessories = () => {
     setIsModalOpen(true);
   };
 
-  const getMountedFirearmName = (id: number | null) => {
-    if (!id) return null;
-    const f = firearmsMap.get(id);
-    if (f) return `${f.make} ${f.model}`;
-    return 'Unknown Firearm';
-  };
-
+  // Metrics summaries
   const totalValue = useMemo(
     () =>
       accessories.reduce(
@@ -255,50 +189,382 @@ export const Accessories = () => {
       ),
     [accessories]
   );
+
   const totalItemsCount = useMemo(
-    () => accessories.reduce((sum, acc) => sum + (acc.quantity || 1), 0),
+    () => accessories.reduce((sum, acc) => sum + (acc.quantity && acc.quantity > 0 ? acc.quantity : 1), 0),
     [accessories]
   );
 
+  const totalMountedCount = useMemo(
+    () =>
+      accessories.reduce(
+        (sum, acc) => sum + (acc.mounts?.reduce((mSum, m) => mSum + (m.quantity || 1), 0) || 0),
+        0
+      ),
+    [accessories]
+  );
+
+  const opticsValuation = useMemo(
+    () =>
+      accessories
+        .filter((a) => a.type?.toLowerCase().includes('optic') || a.type?.toLowerCase().includes('scope'))
+        .reduce((sum, a) => sum + parseCurrency(a.value) * (Number(a.quantity) || 1), 0),
+    [accessories]
+  );
+
+  const categoryCounts = useMemo(() => {
+    return {
+      all: accessories.length,
+      optics: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('optic') || t.includes('scope') || t.includes('sight');
+      }).length,
+      suppressors: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('suppressor') || t.includes('silencer') || a.is_nfa;
+      }).length,
+      magazines: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('magazine') || t.includes('mag');
+      }).length,
+      holsters: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('holster') || t.includes('belt');
+      }).length,
+      lights: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('light') || t.includes('laser');
+      }).length,
+      mounts: accessories.filter((a) => (a.type || '').toLowerCase().includes('mount')).length,
+      stocks: accessories.filter((a) => {
+        const t = (a.type || '').toLowerCase();
+        return t.includes('stock') || t.includes('chassis');
+      }).length,
+      mounted: accessories.filter(
+        (a) => a.mounts && a.mounts.some((m) => (m.quantity || 1) > 0 && m.firearmId)
+      ).length,
+      unmounted: accessories.filter((a) => {
+        const totalMounted = a.mounts ? a.mounts.reduce((sum, m) => sum + (m.quantity || 1), 0) : 0;
+        const qty = a.quantity && a.quantity > 0 ? a.quantity : 1;
+        return qty > totalMounted;
+      }).length,
+    };
+  }, [accessories]);
+
+  // Filtered accessories memo
+  const filteredAccessories = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    return accessories.filter((a) => {
+      // Category / Tab filter
+      if (activeTab === 'optics') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('optic') && !t.includes('scope') && !t.includes('sight')) return false;
+      } else if (activeTab === 'suppressors') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('suppressor') && !t.includes('silencer') && !a.is_nfa) return false;
+      } else if (activeTab === 'magazines') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('magazine') && !t.includes('mag')) return false;
+      } else if (activeTab === 'holsters') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('holster') && !t.includes('belt')) return false;
+      } else if (activeTab === 'lights') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('light') && !t.includes('laser')) return false;
+      } else if (activeTab === 'mounts') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('mount')) return false;
+      } else if (activeTab === 'stocks') {
+        const t = (a.type || '').toLowerCase();
+        if (!t.includes('stock') && !t.includes('chassis')) return false;
+      } else if (activeTab === 'mounted') {
+        const isMounted = a.mounts && a.mounts.some((m) => (m.quantity || 1) > 0 && m.firearmId);
+        if (!isMounted) return false;
+      } else if (activeTab === 'unmounted') {
+        const totalMounted = a.mounts ? a.mounts.reduce((sum, m) => sum + (m.quantity || 1), 0) : 0;
+        const qty = a.quantity && a.quantity > 0 ? a.quantity : 1;
+        if (qty <= totalMounted) return false;
+      }
+
+      // Text search
+      if (term) {
+        const matchesSearch =
+          a.manufacturer.toLowerCase().includes(term) ||
+          a.model.toLowerCase().includes(term) ||
+          a.type.toLowerCase().includes(term) ||
+          (a.stockType && a.stockType.toLowerCase().includes(term)) ||
+          (a.actionInlet && a.actionInlet.toLowerCase().includes(term)) ||
+          (a.bufferTubeType && a.bufferTubeType.toLowerCase().includes(term)) ||
+          (a.beltType && a.beltType.toLowerCase().includes(term)) ||
+          (a.dropLoopType && a.dropLoopType.toLowerCase().includes(term)) ||
+          (a.cartridgeLoopCaliber && a.cartridgeLoopCaliber.toLowerCase().includes(term)) ||
+          (a.upc_code && a.upc_code.toLowerCase().includes(term)) ||
+          (a.serialNumber && a.serialNumber.toLowerCase().includes(term)) ||
+          (a.supportedModels && a.supportedModels.toLowerCase().includes(term));
+
+        if (!matchesSearch) return false;
+      }
+
+      // Storage location
+      if (selectedLocationId === 'ALL') return true;
+      const loc = storageIndex.getLocation('accessory', a.id);
+      if (selectedLocationId === 'UNASSIGNED') {
+        return !loc;
+      }
+      return loc?.id === Number(selectedLocationId);
+    });
+  }, [accessories, search, selectedLocationId, storageIndex, activeTab]);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisibleCount(filteredAccessories.length);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 36, filteredAccessories.length));
+        }
+      },
+      { rootMargin: '400px' }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [filteredAccessories.length]);
+
   return (
     <div className="page-container fade-in">
+      {/* Page Header Bar */}
       <div className="page-header">
         <div>
           <h1>Accessories & Optics</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>
+          <p className="page-subtitle">
             Track sights, suppressors, mounts, and tactical gear with comprehensive detail cards.
           </p>
         </div>
         <button className="btn-primary" onClick={openNewModal}>
-          <PlusCircle size={20} /> Add Accessory
+          <PlusCircle size={16} />
+          <span>Add Accessory</span>
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
+      {/* Togglable Command Metrics Grid */}
+      <div className="accessory-metrics-grid">
+        {/* Metric 1: Total Gear Items */}
         <div
-          style={{ display: 'flex', gap: '0.75rem', flex: 1, flexWrap: 'wrap', maxWidth: '650px' }}
+          className="stat-card stat-card-clickable"
+          onClick={() => setActiveTab('all')}
+          title="Click to view all accessories"
         >
-          <div className="search-bar" style={{ flex: 1, minWidth: '240px' }}>
-            <Search size={20} color="var(--text-secondary)" />
+          <div className="stat-card-content">
+            <div className="stat-icon-wrap stat-icon-blue">
+              <Package size={22} />
+            </div>
+            <div>
+              <div className="stat-label">Total Gear Items</div>
+              <div className="stat-val">{totalItemsCount}</div>
+              <div className="stat-sub">
+                {accessories.length} Models &bull; {totalMountedCount} Mounted
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 2: Optics & Sights */}
+        <div
+          className="stat-card stat-card-clickable"
+          onClick={() => setActiveTab(activeTab === 'optics' ? 'all' : 'optics')}
+          title="Click to filter optics & sights"
+        >
+          <div className="stat-card-content">
+            <div className="stat-icon-wrap stat-icon-cyan">
+              <ScopeIcon size={22} color="#38bdf8" />
+            </div>
+            <div>
+              <div className="stat-label">Optics & Sights</div>
+              <div className="stat-val">{categoryCounts.optics}</div>
+              <div className="stat-sub">
+                {maskValue(formatCurrency(opticsValuation), 'currency', themeConfig.privacyMode)} Value
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 3: Magazines */}
+        <div
+          className="stat-card stat-card-clickable"
+          onClick={() => setActiveTab(activeTab === 'magazines' ? 'all' : 'magazines')}
+          title="Click to filter magazines"
+        >
+          <div className="stat-card-content">
+            <div className="stat-icon-wrap stat-icon-purple">
+              <MagazineIcon size={22} color="#c084fc" />
+            </div>
+            <div>
+              <div className="stat-label">Magazines</div>
+              <div className="stat-val">{categoryCounts.magazines}</div>
+              <div className="stat-sub">Multi-Caliber Profiles</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 4: Suppressors & NFA */}
+        <div
+          className="stat-card stat-card-clickable"
+          onClick={() => setActiveTab(activeTab === 'suppressors' ? 'all' : 'suppressors')}
+          title="Click to filter suppressors & NFA items"
+        >
+          <div className="stat-card-content">
+            <div className="stat-icon-wrap stat-icon-emerald">
+              <SuppressorIcon size={22} color="#34d399" />
+            </div>
+            <div>
+              <div className="stat-label">Suppressors & NFA</div>
+              <div className="stat-val">{categoryCounts.suppressors}</div>
+              <div className="stat-sub">NFA Regulated Items</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 5: Total Gear Valuation */}
+        <div className="stat-card">
+          <div className="stat-card-content">
+            <div className="stat-icon-wrap stat-icon-amber">
+              <DollarSign size={22} color="#fbbf24" />
+            </div>
+            <div>
+              <div className="stat-label">Gear Valuation</div>
+              <div className="stat-val">
+                {maskValue(formatCurrency(totalValue), 'currency', themeConfig.privacyMode)}
+              </div>
+              <div className="stat-sub">Tactical Asset Baseline</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Unified Dashboard Control Deck */}
+      <div className="dashboard-control-deck">
+        {/* Left: Category Filter Chips */}
+        <div className="filter-chips-bar" data-testid="filter-chips-bar">
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            <span>All Items</span>
+            <span className="filter-chip-count">{categoryCounts.all}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'optics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('optics')}
+          >
+            <ScopeIcon size={14} color="#38bdf8" />
+            <span>Optics</span>
+            <span className="filter-chip-count">{categoryCounts.optics}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'suppressors' ? 'active' : ''}`}
+            onClick={() => setActiveTab('suppressors')}
+          >
+            <SuppressorIcon size={14} color="#34d399" />
+            <span>Suppressors</span>
+            <span className="filter-chip-count">{categoryCounts.suppressors}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'magazines' ? 'active' : ''}`}
+            onClick={() => setActiveTab('magazines')}
+          >
+            <MagazineIcon size={14} color="#c084fc" />
+            <span>Magazines</span>
+            <span className="filter-chip-count">{categoryCounts.magazines}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'holsters' ? 'active' : ''}`}
+            onClick={() => setActiveTab('holsters')}
+          >
+            <HolsterIcon size={14} color="#f59e0b" />
+            <span>Holsters</span>
+            <span className="filter-chip-count">{categoryCounts.holsters}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'mounts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mounts')}
+          >
+            <PicatinnyMountIcon size={14} color="#60a5fa" />
+            <span>Mounts</span>
+            <span className="filter-chip-count">{categoryCounts.mounts}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'stocks' ? 'active' : ''}`}
+            onClick={() => setActiveTab('stocks')}
+          >
+            <ChassisIcon size={14} color="#10b981" />
+            <span>Stocks</span>
+            <span className="filter-chip-count">{categoryCounts.stocks}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'mounted' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mounted')}
+          >
+            <StockIcon size={14} color="#34d399" />
+            <span>Mounted</span>
+            <span className="filter-chip-count">{categoryCounts.mounted}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`filter-chip ${activeTab === 'unmounted' ? 'active' : ''}`}
+            onClick={() => setActiveTab('unmounted')}
+          >
+            <Package size={14} color="#94a3b8" />
+            <span>In Safe</span>
+            <span className="filter-chip-count">{categoryCounts.unmounted}</span>
+          </button>
+        </div>
+
+        {/* Right: Search Box + Storage Location Dropdown */}
+        <div className="dashboard-control-right">
+          <div className="search-box">
+            <Search size={15} color="var(--text-muted)" />
             <input
               type="text"
-              placeholder="Search accessories by make, model, type, SKU..."
+              placeholder="Search make, model, type, SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearch('')}
+                title="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
+
           <select
-            className="form-input"
-            style={{ width: 'auto', minWidth: '180px' }}
+            className="form-input select-box"
             value={selectedLocationId}
             onChange={(e) => setSelectedLocationId(e.target.value)}
             title="Filter accessories by storage location / safe"
@@ -312,685 +578,40 @@ export const Accessories = () => {
             ))}
           </select>
         </div>
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            padding: '0.8rem 1.5rem',
-            borderRadius: '8px',
-            border: '1px solid var(--border-light)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-          }}
-        >
-          {themeConfig.widgets.accessoryValuation && (
-            <>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Total Value
-                </div>
-                <div
-                  className="privacy-mask-val"
-                  style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)' }}
-                >
-                  {maskValue(formatCurrency(totalValue), 'currency', themeConfig.privacyMode)}
-                </div>
-              </div>
-              <div
-                style={{ width: '1px', height: '30px', background: 'var(--border-light)' }}
-              ></div>
-            </>
-          )}
-          <div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Item Count</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>{totalItemsCount}</div>
-          </div>
-        </div>
       </div>
 
+      {/* Grid or Empty State */}
       {filteredAccessories.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            background: 'var(--bg-card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-light)',
-          }}
-        >
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            <AlertCircle size={48} style={{ margin: '0 auto', opacity: 0.5 }} />
+        <div className="empty-state-card">
+          <div className="empty-state-icon">
+            <AlertCircle size={48} />
           </div>
-          <h3>No accessories found</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          <h3 className="empty-state-title">No accessories found</h3>
+          <p className="empty-state-desc">
             Add your first optic, suppressor, or accessory to start tracking.
           </p>
-          <button className="btn-primary" onClick={openNewModal}>
+          <button type="button" className="btn-primary" onClick={openNewModal}>
             Add Accessory
           </button>
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
-          {filteredAccessories.slice(0, visibleCount).map((acc) => {
-            const typeColor = getAccessoryTypeColor(acc.type);
-            const totalMounted = acc.mounts
-              ? acc.mounts.reduce((sum, m) => sum + (m.quantity || 1), 0)
-              : 0;
-            const quantity = acc.quantity && acc.quantity > 0 ? acc.quantity : 1;
-            const unmountedCount = Math.max(0, quantity - totalMounted);
-
-            return (
-              <div
-                key={acc.id}
-                className="card tactical-card"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  cursor: 'pointer',
-                  transition:
-                    'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-                  border: '1px solid var(--border-light)',
-                  padding: '1.25rem',
-                  position: 'relative',
-                }}
-                onClick={() => setSelectedAccessoryForDetail(acc)}
-              >
-                {/* Header & Badges */}
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                  <div
-                    style={{
-                      width: '85px',
-                      height: '85px',
-                      borderRadius: '10px',
-                      background: 'rgba(0,0,0,0.3)',
-                      flexShrink: 0,
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                    }}
-                  >
-                    {acc.photo ? (
-                      <img
-                        src={getLocalImageUrl(acc.photo, true)}
-                        alt={acc.model}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <Camera size={26} color="var(--text-secondary)" style={{ opacity: 0.6 }} />
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        marginBottom: '0.35rem',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: typeColor.bg,
-                          color: typeColor.text,
-                          border: `1px solid ${typeColor.border}`,
-                          padding: '0.12rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                        }}
-                      >
-                        {acc.type === 'Optic' ? (
-                          <ScopeIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Suppressor' ? (
-                          <SuppressorIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Light' ? (
-                          <Flashlight size={12} />
-                        ) : acc.type === 'Holster' ? (
-                          <HolsterIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Mount' ? (
-                          <PicatinnyMountIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Sling' ? (
-                          <TacticalSlingIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Magazine' ? (
-                          <MagazineIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Stock' ? (
-                          <StockIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Chassis' ? (
-                          <ChassisIcon size={12} color={typeColor.text} />
-                        ) : acc.type === 'Belt' ? (
-                          <GunBeltIcon size={12} color={typeColor.text} />
-                        ) : (
-                          <Package size={12} />
-                        )}
-                        {acc.type}
-                      </span>
-                      {acc.round_count !== undefined && acc.round_count > 0 && (
-                        <span
-                          style={{
-                            background: 'rgba(56, 189, 248, 0.15)',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.35)',
-                            padding: '0.1rem 0.45rem',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                          }}
-                        >
-                          <Target size={11} color="#38bdf8" />
-                          <span>{acc.round_count.toLocaleString()} rds</span>
-                        </span>
-                      )}
-                      {acc.is_nfa && (
-                        <span
-                          style={{
-                            background:
-                              acc.stamp_status === 'Approved'
-                                ? 'rgba(34, 197, 94, 0.15)'
-                                : 'rgba(234, 179, 8, 0.2)',
-                            color: acc.stamp_status === 'Approved' ? '#4ade80' : '#eab308',
-                            border: `1px solid ${acc.stamp_status === 'Approved' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(234, 179, 8, 0.5)'}`,
-                            padding: '0.1rem 0.45rem',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          NFA
-                        </span>
-                      )}
-                      <StorageBadge
-                        location={getItemStorageLocation('accessory', acc.id, locations)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/storage');
-                        }}
-                        size="sm"
-                      />
-                    </div>
-
-                    <h3
-                      style={{
-                        margin: '0 0 0.25rem 0',
-                        fontSize: '1.05rem',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {quantity > 1 ? `${quantity}x ` : ''}
-                      {acc.manufacturer} {acc.model}
-                    </h3>
-
-                    <div
-                      className="privacy-mask-val"
-                      style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--success)' }}
-                    >
-                      {maskValue(
-                        formatCurrency(parseCurrency(acc.value) * quantity),
-                        'currency',
-                        themeConfig.privacyMode
-                      )}
-                      {quantity > 1 && (
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-secondary)',
-                            fontWeight: 400,
-                          }}
-                        >
-                          {' '}
-                          (
-                          {maskValue(
-                            formatCurrency(acc.value),
-                            'currency',
-                            themeConfig.privacyMode
-                          )}{' '}
-                          ea)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Feature & Technical Spec Chips */}
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.4rem',
-                    flexWrap: 'wrap',
-                    marginBottom: '0.85rem',
-                  }}
-                >
-                  {acc.magnification && (
-                    <span
-                      style={{
-                        background: 'rgba(56, 189, 248, 0.1)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <ScopeIcon size={12} color="#38bdf8" />
-                      <span>{acc.magnification}</span>
-                    </span>
-                  )}
-                  {acc.lumens && (
-                    <span
-                      style={{
-                        background: 'rgba(251, 191, 36, 0.1)',
-                        color: '#fbbf24',
-                        border: '1px solid rgba(251, 191, 36, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Flashlight size={12} color="#fbbf24" />
-                      <span>{acc.lumens.toLocaleString()} lm</span>
-                    </span>
-                  )}
-                  {acc.ratedCalibers && (
-                    <span
-                      style={{
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        color: '#f59e0b',
-                        border: '1px solid rgba(245, 158, 11, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Shield size={12} color="#f59e0b" />
-                      <span>{acc.ratedCalibers}</span>
-                    </span>
-                  )}
-                  {acc.capacity && (
-                    <span
-                      style={{
-                        background: 'rgba(192, 132, 252, 0.1)',
-                        color: '#c084fc',
-                        border: '1px solid rgba(192, 132, 252, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Disc size={11} style={{ color: '#c084fc', flexShrink: 0 }} />
-                      <span>
-                        {acc.caliber ? `${acc.caliber} • ` : ''}
-                        {acc.capacity}rd
-                      </span>
-                    </span>
-                  )}
-                  {acc.actionInlet && (
-                    <span
-                      style={{
-                        background: 'rgba(56, 189, 248, 0.1)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Target size={12} color="#38bdf8" />
-                      <span>{acc.actionInlet}</span>
-                    </span>
-                  )}
-                  {acc.stockType && (
-                    <span
-                      style={{
-                        background: 'rgba(16, 185, 129, 0.1)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      {acc.type === 'Chassis' ? (
-                        <ChassisIcon size={12} color="#10b981" />
-                      ) : (
-                        <StockIcon size={12} color="#10b981" />
-                      )}
-                      <span>{acc.stockType}</span>
-                    </span>
-                  )}
-                  {acc.lengthOfPull && (
-                    <span
-                      style={{
-                        background: 'rgba(52, 211, 153, 0.1)',
-                        color: '#34d399',
-                        border: '1px solid rgba(52, 211, 153, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                      }}
-                    >
-                      LOP: {acc.lengthOfPull}
-                    </span>
-                  )}
-                  {acc.bufferTubeType && (
-                    <span
-                      style={{
-                        background: 'rgba(96, 165, 250, 0.1)',
-                        color: '#60a5fa',
-                        border: '1px solid rgba(96, 165, 250, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {acc.bufferTubeType}
-                    </span>
-                  )}
-                  {acc.beltType && (
-                    <span
-                      style={{
-                        background: 'rgba(234, 179, 8, 0.1)',
-                        color: '#eab308',
-                        border: '1px solid rgba(234, 179, 8, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <GunBeltIcon size={12} color="#eab308" />
-                      <span>{acc.beltType}</span>
-                    </span>
-                  )}
-                  {acc.dropLoopType && (
-                    <span
-                      style={{
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        color: '#f59e0b',
-                        border: '1px solid rgba(245, 158, 11, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <GunBeltIcon size={12} color="#f59e0b" />
-                      <span>{acc.dropLoopType}</span>
-                    </span>
-                  )}
-                  {acc.cartridgeLoopCaliber && (
-                    <span
-                      style={{
-                        background: 'rgba(251, 191, 36, 0.1)',
-                        color: '#fbbf24',
-                        border: '1px solid rgba(251, 191, 36, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <GunBeltIcon size={12} color="#fbbf24" />
-                      <span>
-                        {acc.cartridgeLoopCount ? `${acc.cartridgeLoopCount}x ` : ''}
-                        {acc.cartridgeLoopCaliber}
-                      </span>
-                    </span>
-                  )}
-                  {acc.beltWidth && (
-                    <span
-                      style={{
-                        background: 'rgba(56, 189, 248, 0.1)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                      }}
-                    >
-                      Width: {acc.beltWidth}
-                    </span>
-                  )}
-                  {acc.supportedModels && !acc.actionInlet && (
-                    <span
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        color: 'var(--text-secondary)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        maxWidth: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Fits: {acc.supportedModels}
-                    </span>
-                  )}
-                  {acc.serialNumber && (
-                    <span
-                      className="privacy-mask-serial"
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        color: 'var(--text-secondary)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      SN: {maskValue(acc.serialNumber, 'serial', themeConfig.privacyMode)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Mounts Allocation Deck */}
-                {acc.mounts && acc.mounts.length > 0 ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.35rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    {acc.mounts.map((m, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          background: 'rgba(56, 189, 248, 0.07)',
-                          border: '1px solid rgba(56, 189, 248, 0.2)',
-                          padding: '0.35rem 0.7rem',
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/details/${m.firearmId}`);
-                        }}
-                        title="Click to view mounted firearm details"
-                      >
-                        <LinkIcon size={13} color="var(--accent)" />
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                          Mounted on:
-                        </span>
-                        <strong
-                          style={{
-                            color: 'var(--text-primary)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            flex: 1,
-                          }}
-                        >
-                          {getMountedFirearmName(m.firearmId)}
-                        </strong>
-                        <span
-                          style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            padding: '0.08rem 0.4rem',
-                            borderRadius: '10px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Qty: {m.quantity}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      marginBottom: '1rem',
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      background: 'rgba(255,255,255,0.02)',
-                      padding: '0.35rem 0.6rem',
-                      borderRadius: '4px',
-                      border: '1px dashed rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Package size={13} color="var(--text-muted)" />
-                      <span>In Storage ({quantity} unmounted)</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Card Action Buttons */}
-                <div
-                  style={{
-                    marginTop: 'auto',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid var(--border-light)',
-                  }}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedAccessoryForDetail(acc);
-                    }}
-                    className="btn-secondary"
-                    style={{
-                      fontSize: '0.8rem',
-                      padding: '0.4rem 0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Eye size={14} /> View Details
-                  </button>
-
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(acc);
-                      }}
-                      className="btn-icon"
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        color: 'var(--text-primary)',
-                        padding: '0.45rem',
-                        borderRadius: '6px',
-                      }}
-                      title="Edit Accessory"
-                    >
-                      <Edit size={15} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(acc.id!);
-                      }}
-                      className="btn-icon"
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--danger)',
-                        padding: '0.45rem',
-                        borderRadius: '6px',
-                      }}
-                      title="Delete Accessory"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {visibleCount < filteredAccessories.length && (
-            <div
-              ref={loadMoreRef}
-              style={{ height: '40px', width: '100%', gridColumn: '1 / -1' }}
+        <div className="accessory-grid">
+          {filteredAccessories.slice(0, visibleCount).map((acc) => (
+            <AccessoryCard
+              key={acc.id}
+              accessory={acc}
+              firearmsMap={firearmsMap}
+              locations={locations}
+              themeConfig={themeConfig}
+              onSelectDetail={(target) => setSelectedAccessoryForDetail(target)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onNavigateToFirearm={(firearmId) => navigate(`/details/${firearmId}`)}
+              onNavigateToStorage={() => navigate('/storage')}
             />
+          ))}
+          {visibleCount < filteredAccessories.length && (
+            <div ref={loadMoreRef} style={{ height: '40px', width: '100%', gridColumn: '1 / -1' }} />
           )}
         </div>
       )}

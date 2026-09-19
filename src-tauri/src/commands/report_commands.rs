@@ -6,7 +6,7 @@ const ARMORER_WORK_ORDER_TYP: &str = include_str!("../../templates/armorer_work_
 const ARMORY_BINDER_TYP: &str = include_str!("../../templates/armory_binder.typ");
 const BILL_OF_SALE_TYP: &str = include_str!("../../templates/bill_of_sale.typ");
 
-/// Resolves the local Typst compiler binary across standard macOS, Linux, and PATH locations
+/// Resolves the local Typst compiler binary across standard macOS, Linux, Windows, and PATH locations
 pub fn find_typst_binary() -> Option<PathBuf> {
     let candidates = [
         "/usr/local/bin/typst",
@@ -19,6 +19,23 @@ pub fn find_typst_binary() -> Option<PathBuf> {
             return Some(p);
         }
     }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let win_path = PathBuf::from(local_app_data).join("Programs").join("typst").join("typst.exe");
+            if win_path.exists() {
+                return Some(win_path);
+            }
+        }
+        if let Ok(prog_files) = std::env::var("ProgramFiles") {
+            let win_path = PathBuf::from(prog_files).join("typst").join("typst.exe");
+            if win_path.exists() {
+                return Some(win_path);
+            }
+        }
+    }
+
     if let Ok(output) = std::process::Command::new("typst").arg("--version").output() {
         if output.status.success() {
             return Some(PathBuf::from("typst"));

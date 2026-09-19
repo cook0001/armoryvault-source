@@ -169,10 +169,18 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           { key: '', label: '— Skip this column —' },
           { key: 'caliber', label: 'Caliber / Gauge' },
           { key: 'manufacturer', label: 'Manufacturer / Brand' },
+          { key: 'type', label: 'Ammo Type (factory / handload)' },
           { key: 'name', label: 'Product Name / Line' },
           { key: 'bullet_type', label: 'Bullet Type (FMJ, HP, etc.)' },
+          { key: 'bullet_manufacturer', label: 'Bullet Manufacturer' },
           { key: 'grain_weight', label: 'Grain Weight' },
           { key: 'quantity', label: 'Total Round Count' },
+          { key: 'powder', label: 'Powder / Propellant' },
+          { key: 'powderCharge', label: 'Powder Charge (grains)' },
+          { key: 'primer', label: 'Primer' },
+          { key: 'primer_type', label: 'Primer Type / Pocket' },
+          { key: 'brass', label: 'Brass / Case' },
+          { key: 'oal', label: 'Overall Length (COAL)' },
           { key: 'rounds_per_box', label: 'Rounds Per Box' },
           { key: 'box_price', label: 'Box Price' },
           { key: 'cost_per_round', label: 'Cost Per Round' },
@@ -526,7 +534,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
               <p
                 style={{ margin: '0 0 1rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}
               >
-                Supports standard comma, tab, semicolon, and pipe-delimited exports.
+                Supports standard CSV, TSV, JSON, and LoadBench Handload Cards (.avr, .loadbench, .ldb).
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
                 <button
@@ -560,7 +568,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   Choose From Disk
                   <input
                     type="file"
-                    accept=".csv,.tsv,.txt"
+                    accept=".csv,.tsv,.txt,.json,.avr,.loadbench,.ldb"
                     onChange={handleFileInputChange}
                     style={{ display: 'none' }}
                   />

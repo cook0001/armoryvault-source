@@ -1,8 +1,11 @@
+use crate::commands::vault_commands::AppState;
+use crate::storage::db::Database;
 use crate::storage::paths::AppPaths;
 use crate::storage::MediaManager;
 use serde_json::{json, Value};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use tauri::State;
 use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 
@@ -65,7 +68,11 @@ pub fn get_backup_folder() -> Option<String> {
     let config_path = AppPaths::get_app_data_dir().join("config.json");
     if let Ok(content) = std::fs::read_to_string(config_path) {
         if let Ok(val) = serde_json::from_str::<Value>(&content) {
-            return val.get("backup_folder").and_then(|v| v.as_str()).map(|s| s.to_string());
+            return val
+                .get("backup_folder")
+                .or_else(|| val.get("backupPath"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
         }
     }
     None
@@ -85,12 +92,84 @@ pub fn select_backup_folder() -> Option<String> {
         } else {
             json!({})
         };
-        cfg["backup_folder"] = json!(folder_str);
+        cfg["backup_folder"] = json!(folder_str.clone());
+        cfg["backupPath"] = json!(folder_str.clone());
         let _ = std::fs::write(config_path, serde_json::to_string_pretty(&cfg).unwrap_or_default());
+        let _ = perform_auto_backup();
         Some(folder_str)
     } else {
         None
     }
+}
+
+/// Automatically copies active encrypted stores to the configured backup folder with date-stamping
+/// and rotates the directory to retain only the 5 most recent date-stamped backups.
+pub fn perform_auto_backup() -> Result<(), String> {
+    let backup_dir = match get_backup_folder() {
+        Some(d) if !d.trim().is_empty() => PathBuf::from(d),
+        _ => return Ok(()),
+    };
+
+    if !backup_dir.exists() || !backup_dir.is_dir() {
+        return Ok(());
+    }
+
+    let app_data = AppPaths::get_app_data_dir();
+    let date_str = chrono::Utc::now().format("%Y-%m-%d").to_string();
+
+    // 1. Copy active encrypted stores with date-stamped filenames
+    let vault_enc = app_data.join("firearms_inventory.enc");
+    if vault_enc.exists() {
+        let dest = backup_dir.join(format!("ArmoryVault_Backup_{}.enc", date_str));
+        let _ = std::fs::copy(&vault_enc, dest);
+    }
+
+    let skus_enc = app_data.join("skus_database.enc");
+    if skus_enc.exists() {
+        let dest = backup_dir.join(format!("ArmoryVault_Skus_Backup_{}.enc", date_str));
+        let _ = std::fs::copy(&skus_enc, dest);
+    }
+
+    let act_enc = app_data.join("activity_log.enc");
+    if act_enc.exists() {
+        let dest = backup_dir.join(format!("ArmoryVault_ActivityLog_Backup_{}.enc", date_str));
+        let _ = std::fs::copy(&act_enc, dest);
+    }
+
+    // 2. Rotate: Keep only the 5 most recent date-stamped backups
+    const MAX_BACKUPS: usize = 5;
+    if let Ok(entries) = std::fs::read_dir(&backup_dir) {
+        let mut backup_files: Vec<PathBuf> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.starts_with("ArmoryVault_Backup_") && name.ends_with(".enc") {
+                    backup_files.push(path);
+                }
+            }
+        }
+
+        backup_files.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+
+        if backup_files.len() > MAX_BACKUPS {
+            for old_file in &backup_files[MAX_BACKUPS..] {
+                if let Some(name) = old_file.file_name().and_then(|n| n.to_str()) {
+                    let date_part = name
+                        .strip_prefix("ArmoryVault_Backup_")
+                        .and_then(|s| s.strip_suffix(".enc"));
+                    let _ = std::fs::remove_file(old_file);
+                    if let Some(date) = date_part {
+                        let old_skus = backup_dir.join(format!("ArmoryVault_Skus_Backup_{}.enc", date));
+                        let _ = std::fs::remove_file(old_skus);
+                        let old_act = backup_dir.join(format!("ArmoryVault_ActivityLog_Backup_{}.enc", date));
+                        let _ = std::fs::remove_file(old_act);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn add_dir_to_zip<W: Write + std::io::Seek>(
@@ -148,10 +227,9 @@ pub fn create_zip_backup() -> Result<Value, String> {
 
     // Package root database & vault artifacts
     for filename in &[
-        "armoryvault.sqlite",
-        "armoryvault.sqlite-wal",
-        "armoryvault.sqlite-shm",
         "firearms_inventory.enc",
+        "activity_log.enc",
+        "skus_database.enc",
         "config.json",
     ] {
         let f_path = app_data.join(filename);
@@ -189,12 +267,19 @@ pub fn create_zip_backup() -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub fn restore_backup() -> Result<Value, String> {
+pub fn restore_backup(state: State<AppState>) -> Result<Value, String> {
     let picked = rfd::FileDialog::new()
-        .set_title("Select Backup File to Restore")
-        .add_filter("ArmoryVault Backups (*.enc, *.zip)", &["enc", "zip"])
-        .add_filter("Encrypted Vault (*.enc)", &["enc"])
-        .add_filter("Full Zip Archive (*.zip)", &["zip"])
+        .set_title("Select Database File to Restore or Import")
+        .add_filter(
+            "All Supported Databases (*.enc, *.zip, *.sqlite, *.db, *.json, *.csv, *.tsv, *.bak)",
+            &["enc", "zip", "sqlite", "db", "sqlite3", "json", "csv", "tsv", "bak"],
+        )
+        .add_filter("Encrypted Vault (*.enc, *.bak)", &["enc", "bak"])
+        .add_filter("Full Backup Archive (*.zip)", &["zip"])
+        .add_filter("SQLite Database (*.sqlite, *.db, *.sqlite3)", &["sqlite", "db", "sqlite3"])
+        .add_filter("JSON Database Export (*.json)", &["json"])
+        .add_filter("Spreadsheets & CSV (*.csv, *.tsv)", &["csv", "tsv"])
+        .add_filter("All Files (*.*)", &["*"])
         .pick_file();
 
     let backup_path = match picked {
@@ -209,10 +294,79 @@ pub fn restore_backup() -> Result<Value, String> {
         .to_lowercase();
 
     let app_data = AppPaths::get_app_data_dir();
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
 
-    if ext == "enc" {
-        let dest = app_data.join("firearms_inventory.enc");
+    // 1. Create safety backup copies of current active encrypted stores
+    let current_vault = app_data.join("firearms_inventory.enc");
+    if current_vault.exists() {
+        let _ = std::fs::copy(
+            &current_vault,
+            app_data.join(format!("firearms_inventory_pre_restore_{}.enc.bak", timestamp)),
+        );
+    }
+    let current_act = app_data.join("activity_log.enc");
+    if current_act.exists() {
+        let _ = std::fs::copy(
+            &current_act,
+            app_data.join(format!("activity_log_pre_restore_{}.enc.bak", timestamp)),
+        );
+    }
+    let current_skus = app_data.join("skus_database.enc");
+    if current_skus.exists() {
+        let _ = std::fs::copy(
+            &current_skus,
+            app_data.join(format!("skus_database_pre_restore_{}.enc.bak", timestamp)),
+        );
+    }
+
+    if ext == "enc" || ext == "bak" {
+        let file_stem = backup_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let dest_filename = if file_stem.contains("activity_log") || file_stem.contains("activitylog") {
+            "activity_log.enc"
+        } else if file_stem.contains("sku") {
+            "skus_database.enc"
+        } else {
+            "firearms_inventory.enc"
+        };
+
+        let dest = app_data.join(dest_filename);
         std::fs::copy(&backup_path, &dest).map_err(|e| e.to_string())?;
+
+        // If vault is currently unlocked, check if the current master key decrypts it
+        let mut vault_guard = state.vault.lock().map_err(|e| e.to_string())?;
+        if !vault_guard.is_locked() {
+            if let Ok(decrypted_json) = vault_guard.decrypt_vault() {
+                let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+                crate::commands::vault_commands::initialize_unlocked_state(&vault_guard, &mut db_guard, &decrypted_json)?;
+
+                return Ok(json!({
+                    "success": true,
+                    "requiresRelogin": false,
+                    "filePath": backup_path.to_string_lossy().to_string(),
+                    "type": "enc"
+                }));
+            } else {
+                // Cannot decrypt with current key -> must lock and relogin
+                vault_guard.lock_vault();
+                let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+                *db_guard = None;
+                return Ok(json!({
+                    "success": true,
+                    "requiresRelogin": true,
+                    "filePath": backup_path.to_string_lossy().to_string(),
+                    "type": "enc"
+                }));
+            }
+        }
+
         return Ok(json!({
             "success": true,
             "requiresRelogin": true,
@@ -223,13 +377,17 @@ pub fn restore_backup() -> Result<Value, String> {
         let file = std::fs::File::open(&backup_path).map_err(|e| e.to_string())?;
         let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
 
+        let mut extracted_enc = false;
+        let mut extracted_sqlite = None;
+        let mut extracted_json = None;
+
         for i in 0..archive.len() {
             let mut item = archive.by_index(i).map_err(|e| e.to_string())?;
             let enclosed = match item.enclosed_name() {
                 Some(n) => n.to_owned(),
                 None => continue,
             };
-            let outpath = app_data.join(enclosed);
+            let outpath = app_data.join(&enclosed);
             if item.is_dir() {
                 let _ = std::fs::create_dir_all(&outpath);
             } else {
@@ -238,17 +396,204 @@ pub fn restore_backup() -> Result<Value, String> {
                 }
                 let mut outfile = std::fs::File::create(&outpath).map_err(|e| e.to_string())?;
                 std::io::copy(&mut item, &mut outfile).map_err(|e| e.to_string())?;
+
+                let filename = enclosed.to_string_lossy().to_lowercase();
+                if filename.ends_with("firearms_inventory.enc") {
+                    extracted_enc = true;
+                } else if filename.ends_with(".enc") && !filename.contains("activity_log") && !filename.contains("activitylog") && !filename.contains("sku") {
+                    let _ = std::fs::copy(&outpath, app_data.join("firearms_inventory.enc"));
+                    extracted_enc = true;
+                } else if filename.ends_with(".sqlite") || filename.ends_with(".db") || filename.ends_with(".sqlite3") {
+                    extracted_sqlite = Some(outpath.clone());
+                } else if filename.ends_with("firearms_inventory.json") || filename.ends_with(".json") {
+                    extracted_json = Some(outpath.clone());
+                }
             }
         }
+
+        if extracted_enc {
+            let mut vault_guard = state.vault.lock().map_err(|e| e.to_string())?;
+            if !vault_guard.is_locked() {
+                if let Ok(decrypted_json) = vault_guard.decrypt_vault() {
+                    let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+                    crate::commands::vault_commands::initialize_unlocked_state(&vault_guard, &mut db_guard, &decrypted_json)?;
+
+                    return Ok(json!({
+                        "success": true,
+                        "requiresRelogin": false,
+                        "filePath": backup_path.to_string_lossy().to_string(),
+                        "type": "zip"
+                    }));
+                } else {
+                    vault_guard.lock_vault();
+                    let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+                    *db_guard = None;
+                }
+            }
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": true,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "zip"
+            }));
+        } else if let Some(sqlite_file) = extracted_sqlite {
+            let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+            if let Some(conn) = db_guard.as_mut() {
+                Database::import_from_sqlite(conn, &sqlite_file)?;
+                let _ = state.flush_vault();
+                let _ = state.flush_activity_log();
+                let _ = state.flush_skus();
+                let _ = std::fs::remove_file(&sqlite_file);
+                return Ok(json!({
+                    "success": true,
+                    "requiresRelogin": false,
+                    "filePath": backup_path.to_string_lossy().to_string(),
+                    "type": "zip"
+                }));
+            } else {
+                let dest = app_data.join("armoryvault.sqlite");
+                if sqlite_file != dest {
+                    let _ = std::fs::copy(&sqlite_file, &dest);
+                }
+                return Ok(json!({
+                    "success": true,
+                    "requiresRelogin": true,
+                    "filePath": backup_path.to_string_lossy().to_string(),
+                    "type": "zip"
+                }));
+            }
+        } else if let Some(json_file) = extracted_json {
+            let content = std::fs::read_to_string(&json_file).map_err(|e| e.to_string())?;
+            if let Ok(val) = serde_json::from_str::<Value>(&content) {
+                let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+                if let Some(conn) = db_guard.as_mut() {
+                    Database::import_legacy_json(conn, &val)?;
+                    let _ = state.flush_vault();
+                    let _ = state.flush_activity_log();
+                    let _ = state.flush_skus();
+                    let _ = std::fs::remove_file(&json_file);
+                    return Ok(json!({
+                        "success": true,
+                        "requiresRelogin": false,
+                        "filePath": backup_path.to_string_lossy().to_string(),
+                        "type": "zip"
+                    }));
+                } else {
+                    let dest = app_data.join("firearms_inventory.json");
+                    if json_file != dest {
+                        let _ = std::fs::copy(&json_file, &dest);
+                    }
+                    return Ok(json!({
+                        "success": true,
+                        "requiresRelogin": true,
+                        "filePath": backup_path.to_string_lossy().to_string(),
+                        "type": "zip"
+                    }));
+                }
+            }
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": true,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "zip"
+            }));
+        }
+
         return Ok(json!({
             "success": true,
             "requiresRelogin": true,
             "filePath": backup_path.to_string_lossy().to_string(),
             "type": "zip"
         }));
+    } else if ext == "sqlite" || ext == "db" || ext == "sqlite3" {
+        let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+        if let Some(conn) = db_guard.as_mut() {
+            let count = Database::import_from_sqlite(conn, &backup_path)?;
+            let _ = state.flush_vault();
+            let _ = state.flush_activity_log();
+            let _ = state.flush_skus();
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": false,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "sqlite",
+                "count": count,
+                "message": format!("Imported {} records from SQLite database successfully!", count)
+            }));
+        } else {
+            let dest = app_data.join("armoryvault.sqlite");
+            std::fs::copy(&backup_path, &dest).map_err(|e| e.to_string())?;
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": true,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "sqlite",
+                "message": "SQLite database staged. Please unlock or set up your vault to complete import."
+            }));
+        }
+    } else if ext == "json" {
+        let content = std::fs::read_to_string(&backup_path).map_err(|e| e.to_string())?;
+        let val: Value = serde_json::from_str(&content)
+            .map_err(|e| format!("Invalid JSON database export: {}", e))?;
+
+        let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+        if let Some(conn) = db_guard.as_mut() {
+            Database::import_legacy_json(conn, &val)?;
+            let _ = state.flush_vault();
+            let _ = state.flush_activity_log();
+            let _ = state.flush_skus();
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": false,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "json",
+                "message": "JSON database imported successfully into active vault!"
+            }));
+        } else {
+            let dest = app_data.join("firearms_inventory.json");
+            std::fs::copy(&backup_path, &dest).map_err(|e| e.to_string())?;
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": true,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "json",
+                "message": "JSON database staged. Please unlock or set up your vault to complete import."
+            }));
+        }
+    } else if ext == "csv" || ext == "tsv" {
+        let mut db_guard = state.db.lock().map_err(|e| e.to_string())?;
+        if let Some(conn) = db_guard.as_mut() {
+            let count = Database::import_csv(conn, &backup_path)?;
+            let _ = state.flush_vault();
+            let _ = state.flush_activity_log();
+            let _ = state.flush_skus();
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": false,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "csv",
+                "count": count,
+                "message": format!("Imported {} records from spreadsheet successfully into active vault!", count)
+            }));
+        } else {
+            let dest = app_data.join(format!("imported_records.{}", ext));
+            std::fs::copy(&backup_path, &dest).map_err(|e| e.to_string())?;
+            return Ok(json!({
+                "success": true,
+                "requiresRelogin": true,
+                "filePath": backup_path.to_string_lossy().to_string(),
+                "type": "csv",
+                "message": "Spreadsheet database staged. Please unlock or set up your vault to complete import."
+            }));
+        }
     }
 
-    Err("Unsupported backup format. Must be .enc or .zip".to_string())
+    Err("Unsupported database format. Must be .enc, .zip, .sqlite, .db, .json, .csv, .tsv, or .bak".to_string())
+}
+
+#[tauri::command]
+pub fn import_database(state: State<AppState>) -> Result<Value, String> {
+    restore_backup(state)
 }
 
 #[tauri::command]
@@ -340,7 +685,10 @@ pub fn select_csv_file() -> Result<Option<Value>, String> {
     let picked = rfd::FileDialog::new()
         .set_title("Select CSV / TSV File to Import")
         .add_filter("CSV & Spreadsheets (*.csv, *.tsv, *.txt)", &["csv", "tsv", "txt"])
-        .add_filter("CSV Spreadsheets (*.csv)", &["csv"])
+        .add_filter(
+            "All Supported Import Files (*.csv, *.tsv, *.txt, *.json, *.load, *.loadbench, *.ldb, *.avr)",
+            &["csv", "tsv", "txt", "json", "load", "loadbench", "ldb", "avr"],
+        )
         .add_filter("All Files (*.*)", &["*"])
         .pick_file();
 
@@ -459,3 +807,101 @@ pub fn read_file_buffer(file_path: String) -> Result<Option<Vec<u8>>, String> {
     let bytes = std::fs::read(&clean_path).map_err(|e| e.to_string())?;
     Ok(Some(bytes))
 }
+
+#[tauri::command]
+pub async fn lookup_upc(upc: String) -> Result<Option<Value>, String> {
+    let clean_upc = upc.trim();
+    if clean_upc.is_empty() {
+        return Ok(None);
+    }
+    let url = format!("https://api.upcitemdb.com/prod/trial/lookup?upc={}", clean_upc);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = match client.get(&url).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[UPC] Request failed: {}", e);
+            return Ok(None);
+        }
+    };
+
+    if !res.status().is_success() {
+        return Ok(None);
+    }
+
+    match res.json::<Value>().await {
+        Ok(v) => Ok(Some(v)),
+        Err(e) => {
+            eprintln!("[UPC] JSON parse failed: {}", e);
+            Ok(None)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_auto_backup_rotation() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "av_test_backup_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        ));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // Prepopulate with 7 date-stamped backup files
+        for i in 1..=7 {
+            let fname = format!("ArmoryVault_Backup_2026-08-{:02}.enc", i);
+            let skus_fname = format!("ArmoryVault_Skus_Backup_2026-08-{:02}.enc", i);
+            let act_fname = format!("ArmoryVault_ActivityLog_Backup_2026-08-{:02}.enc", i);
+            let _ = std::fs::write(temp_dir.join(fname), b"vault-test");
+            let _ = std::fs::write(temp_dir.join(skus_fname), b"skus-test");
+            let _ = std::fs::write(temp_dir.join(act_fname), b"act-test");
+        }
+
+        let entries = std::fs::read_dir(&temp_dir).unwrap();
+        let mut backup_files: Vec<PathBuf> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.starts_with("ArmoryVault_Backup_") && name.ends_with(".enc") {
+                    backup_files.push(path);
+                }
+            }
+        }
+        backup_files.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+        assert_eq!(backup_files.len(), 7);
+
+        const MAX_BACKUPS: usize = 5;
+        for old_file in &backup_files[MAX_BACKUPS..] {
+            if let Some(name) = old_file.file_name().and_then(|n| n.to_str()) {
+                let date_part = name
+                    .strip_prefix("ArmoryVault_Backup_")
+                    .and_then(|s| s.strip_suffix(".enc"));
+                let _ = std::fs::remove_file(old_file);
+                if let Some(date) = date_part {
+                    let old_skus = temp_dir.join(format!("ArmoryVault_Skus_Backup_{}.enc", date));
+                    let _ = std::fs::remove_file(old_skus);
+                    let old_act = temp_dir.join(format!("ArmoryVault_ActivityLog_Backup_{}.enc", date));
+                    let _ = std::fs::remove_file(old_act);
+                }
+            }
+        }
+
+        let remaining_entries: Vec<_> = std::fs::read_dir(&temp_dir).unwrap().flatten().collect();
+        assert_eq!(remaining_entries.len(), 15);
+        assert!(!temp_dir.join("ArmoryVault_Backup_2026-08-01.enc").exists());
+        assert!(!temp_dir.join("ArmoryVault_Skus_Backup_2026-08-01.enc").exists());
+        assert!(temp_dir.join("ArmoryVault_Backup_2026-08-07.enc").exists());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+}
+

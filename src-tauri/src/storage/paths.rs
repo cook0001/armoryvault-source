@@ -53,6 +53,14 @@ impl AppPaths {
         Self::get_app_data_dir().join("firearms_inventory.enc")
     }
 
+    pub fn get_activity_log_enc_path() -> PathBuf {
+        Self::get_app_data_dir().join("activity_log.enc")
+    }
+
+    pub fn get_skus_enc_path() -> PathBuf {
+        Self::get_app_data_dir().join("skus_database.enc")
+    }
+
     pub fn get_sqlite_path() -> PathBuf {
         Self::get_app_data_dir().join("armoryvault.sqlite")
     }

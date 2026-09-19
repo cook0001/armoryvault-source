@@ -51,83 +51,38 @@ export const ReportsSettingsSection: React.FC<ReportsSettingsSectionProps> = ({
   };
 
   return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border-light)',
-        borderRadius: '12px',
-        padding: '1.25rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <BookOpen size={18} style={{ color: 'var(--accent)' }} />
-        <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 600 }}>Insurance & Reports</h3>
+    <div className="settings-section-card">
+      <div className="settings-section-header">
+        <BookOpen size={18} className="settings-section-icon" />
+        <h3 className="settings-section-title">Insurance & Reports</h3>
       </div>
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: '0.85rem',
-          margin: '0 0 1rem',
-        }}
-      >
-        Generate comprehensive documentation of your firearms and accessories for insurance or
-        recordkeeping.
+      <p className="settings-section-desc">
+        Generate comprehensive documentation of your firearms and accessories for insurance or recordkeeping.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="settings-action-grid">
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-btn-inner"
           onClick={handleGenerateReport}
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            alignItems: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
-          <BookOpen size={16} /> Insurance Report (PDF)
+          <BookOpen size={16} />
+          <span>Insurance Report (PDF)</span>
         </button>
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-btn-inner"
           onClick={handleExportCSV}
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            alignItems: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
-          <Download size={16} /> Export Firearms (CSV)
+          <Download size={16} />
+          <span>Export Firearms (CSV)</span>
         </button>
         <button
-          className="btn-primary"
+          type="button"
+          className="btn-primary settings-btn-inner"
           onClick={onOpenCsvImport}
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            alignItems: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
-          <UploadCloud size={16} /> Import Data (CSV)
+          <UploadCloud size={16} />
+          <span>Import Data (CSV)</span>
         </button>
       </div>
     </div>

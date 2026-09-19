@@ -15,134 +15,53 @@ export const BackupSettingsSection: React.FC<BackupSettingsSectionProps> = ({
   onRestoreBackup,
 }) => {
   return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border-light)',
-        borderRadius: '12px',
-        padding: '1.25rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <HardDrive size={18} style={{ color: 'var(--accent)' }} />
-        <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 600 }}>Backups & Redundancy</h3>
+    <div className="settings-section-card">
+      <div className="settings-section-header">
+        <HardDrive size={18} className="settings-section-icon" />
+        <h3 className="settings-section-title">Backups & Redundancy</h3>
       </div>
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: '0.85rem',
-          margin: '0 0 1rem',
-        }}
-      >
-        Keep your encrypted inventory safe across external drives or cloud sync folders (e.g.
-        Dropbox, OneDrive).
+      <p className="settings-section-desc">
+        Keep your encrypted inventory safe across external drives or cloud sync folders (e.g. Dropbox, OneDrive).
       </p>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.75rem',
-          alignItems: 'center',
-          marginBottom: '0.75rem',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            background: 'rgba(0,0,0,0.25)',
-            padding: '0.65rem 0.9rem',
-            borderRadius: '6px',
-            border: '1px solid var(--border-light)',
-            fontSize: '0.85rem',
-            color: backupPath ? 'var(--text-primary)' : 'var(--text-secondary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+      <div className="settings-path-picker-row">
+        <div className={`settings-path-display ${backupPath ? 'active' : 'empty'}`}>
           {backupPath || 'No auto-backup folder configured.'}
         </div>
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-folder-btn"
           onClick={onSelectBackup}
-          style={{
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
-          <FolderOpen size={16} /> Choose Folder...
+          <FolderOpen size={16} />
+          <span>Choose Folder...</span>
         </button>
       </div>
 
       {backupPath && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--success)',
-            fontSize: '0.8rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <CheckCircle size={14} /> Auto-rotates up to 5 date-stamped encrypted vault backups in
-          this folder.
+        <div className="settings-status-note success">
+          <CheckCircle size={14} />
+          <span>Auto-rotates up to 5 date-stamped encrypted vault backups in this folder.</span>
         </div>
       )}
 
-      <div
-        style={{
-          paddingTop: '0.75rem',
-          borderTop: '1px solid var(--border-light)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="settings-action-grid bordered">
         <button
-          className="btn-primary"
+          type="button"
+          className="btn-primary settings-btn-inner settings-btn-success"
           onClick={onCreateZipBackup}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: 'var(--success)',
-            justifyContent: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
           <DownloadCloud size={16} />
-          Create Full .zip Archive
+          <span>Create Full .zip Archive</span>
         </button>
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-btn-inner settings-btn-accent-border"
           onClick={onRestoreBackup}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            justifyContent: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-            color: 'var(--accent)',
-            borderColor: 'rgba(59, 130, 246, 0.4)',
-          }}
-          title="Restore database from an encrypted .enc or .zip backup"
+          title="Restore or import database from an encrypted vault (.enc), full archive (.zip), SQLite database (.sqlite, .db), or JSON export (.json)"
         >
           <UploadCloud size={16} />
-          Restore from Backup (.enc / .zip)
+          <span>Restore / Import Database (.enc, .zip, .sqlite, .json)</span>
         </button>
       </div>
     </div>

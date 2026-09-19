@@ -462,3 +462,20 @@ export const formatShotgunSpecs = (
     summary: parts.join(' • ') || ammo.projectile || 'Standard Load',
   };
 };
+
+export const isShotgunCaliber = (caliber?: string): boolean => {
+  if (!caliber) return false;
+  const cal = caliber.toLowerCase();
+  return (
+    cal.includes('ga') ||
+    cal.includes('gauge') ||
+    cal.includes('12ga') ||
+    cal.includes('20ga') ||
+    cal.includes('10ga') ||
+    cal.includes('16ga') ||
+    cal.includes('28ga') ||
+    cal.includes('.410') ||
+    cal.includes('410 bore')
+  );
+};
+

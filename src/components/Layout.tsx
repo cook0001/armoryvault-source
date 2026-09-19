@@ -33,6 +33,7 @@ import {
   SafeIcon,
   ScopeIcon,
 } from './CustomIcons';
+import { GlobalFileDropZone } from './sync';
 
 // Lazy-load heavy modals to optimize initial bundle size & dashboard load time
 const SettingsModal = React.lazy(() =>
@@ -142,6 +143,10 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
       window.removeEventListener('armoryvault-theme-change', handleThemeEvent);
     };
   }, []);
+
+  useEffect(() => {
+    loadSyncQueue();
+  }, [location.pathname]);
 
   const [privacyMode, setPrivacyMode] = useState<boolean>(() => {
     return getStoredTheme().privacyMode;
@@ -309,7 +314,8 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
   }, [isInstalled, activeNavItems]);
 
   return (
-    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <GlobalFileDropZone>
+      <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Ambient background mesh & grid */}
       <div className="bg-mesh" aria-hidden="true"></div>
       <div className="bg-grid" aria-hidden="true"></div>
@@ -319,7 +325,7 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
         {/* Sidebar Brand */}
         <div className="sidebar-brand" onClick={() => navigate('/')}>
           <div className="topbar-brand-icon">
-            <Shield size={20} style={{ color: 'var(--accent)' }} />
+            <Shield size={20} className="text-accent-color" />
           </div>
           {!sidebarCollapsed && (
             <div className="sidebar-brand-text">
@@ -357,15 +363,7 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
           {/* Modules Nav Group */}
           <div className="sidebar-nav-group">
             {!sidebarCollapsed ? (
-              <div
-                className="sidebar-group-label"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingRight: '0.5rem',
-                }}
-              >
+              <div className="sidebar-group-label sidebar-group-header">
                 <span>Modules</span>
                 <button
                   type="button"
@@ -374,15 +372,7 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
                     openModuleCenter();
                   }}
                   title="Open Module Center"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
+                  className="sidebar-group-btn"
                 >
                   <PlusCircle size={14} />
                 </button>
@@ -404,16 +394,9 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
             {modulesNavItems.length === 0 && (
               <button
                 type="button"
-                className="sidebar-nav-link"
+                className="sidebar-nav-link sidebar-add-modules-dashed"
                 onClick={() => openModuleCenter()}
                 title="Browse & Install Modules"
-                style={{
-                  border: '1px dashed var(--border)',
-                  borderRadius: '6px',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.8rem',
-                  marginTop: '0.25rem',
-                }}
               >
                 <PlusCircle size={16} />
                 {!sidebarCollapsed && <span>Add Modules...</span>}
@@ -425,10 +408,9 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
         {/* Sidebar Footer — Collapse Toggle + Sync + Modules + Settings */}
         <div className="sidebar-footer">
           <button
-            className={`sidebar-nav-link ${isActive('/sync') ? 'active' : ''}`}
+            className={`sidebar-nav-link pos-relative ${isActive('/sync') ? 'active' : ''}`}
             onClick={() => navigate('/sync')}
             title={sidebarCollapsed ? 'Mobile Sync' : undefined}
-            style={{ position: 'relative' }}
           >
             <Smartphone size={18} />
             {!sidebarCollapsed && <span>Mobile Sync</span>}
@@ -472,46 +454,37 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
       <div className="app-main-area">
         <header className="app-topbar">
           {/* Slim topbar — just actions */}
-          <div className="topbar-actions" style={{ marginLeft: 'auto' }}>
+          <div className="topbar-actions topbar-actions-right">
             {/* Privacy / Discretion Shield Mode Button */}
             <button
-              className={`btn-secondary ${privacyMode ? 'privacy-active-badge' : ''}`}
+              className={`btn-secondary btn-topbar-privacy ${privacyMode ? 'privacy-active-badge' : ''}`}
               onClick={handleTogglePrivacy}
               title={
                 privacyMode
                   ? 'Privacy Shield Active: Serials, valuations, and safe locations masked. Click to unmask.'
                   : 'Public / Privacy Shield: Click to mask sensitive serials, safe names, and valuations.'
               }
-              style={{
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
             >
               {privacyMode ? (
-                <EyeOff size={16} style={{ color: '#ef4444' }} />
+                <EyeOff size={16} className="text-danger-color" />
               ) : (
-                <Eye size={16} style={{ color: 'var(--text-muted)' }} />
+                <Eye size={16} className="text-muted-color" />
               )}
               <span>{privacyMode ? 'Privacy ON' : 'Privacy'}</span>
             </button>
 
             <button
-              className="btn-secondary"
+              className="btn-secondary btn-topbar-action"
               onClick={() => setIsRangeModalOpen(true)}
               title="Quickly log rounds fired and deduct ammo in one action"
-              style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
             >
-              <Target size={16} style={{ color: 'var(--accent)' }} />
+              <Target size={16} className="text-accent-color" />
               <span>Log Range Trip</span>
             </button>
 
             <button
               onClick={() => navigate('/add')}
-              className="btn-primary"
-              style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
+              className="btn-primary btn-topbar-primary"
             >
               <PlusCircle size={16} />
               <span>Add Firearm</span>
@@ -519,10 +492,9 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
 
             {onLockVault && (
               <button
-                className="btn-icon"
+                className="btn-icon text-warning-color"
                 onClick={onLockVault}
                 title="Lock Vault"
-                style={{ color: 'var(--warning)' }}
               >
                 <Lock size={18} />
               </button>
@@ -532,35 +504,18 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
 
         <main className="main-content" ref={mainContentRef}>
           {updateStatus !== 'idle' && (
-            <div
-              style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                borderBottom: '1px solid var(--border-light)',
-                padding: '1rem 2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                animation: 'fadeIn 0.3s ease-out',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  color: 'var(--text-primary)',
-                }}
-              >
+            <div className="banner-update">
+              <div className="banner-update-content">
                 {updateStatus === 'downloading' ? (
-                  <DownloadCloud style={{ color: 'var(--accent)' }} size={24} />
+                  <DownloadCloud className="text-accent-color" size={24} />
                 ) : (
-                  <RefreshCw style={{ color: 'var(--success)' }} size={24} />
+                  <RefreshCw className="text-success-color" size={24} />
                 )}
                 <div>
-                  <strong style={{ display: 'block', fontSize: '1rem' }}>
+                  <strong className="banner-update-title">
                     {updateStatus === 'downloading' ? 'Downloading Update...' : 'Update Ready'}
                   </strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span className="banner-update-desc">
                     {updateStatus === 'downloading'
                       ? `A new version of ArmoryVault is downloading (${downloadProgress}%).`
                       : 'A new version has been downloaded and is ready to install.'}
@@ -568,40 +523,29 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
                 </div>
               </div>
               {updateStatus === 'downloading' && (
-                <div
-                  style={{
-                    width: '200px',
-                    background: 'rgba(0,0,0,0.3)',
-                    height: '6px',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                  }}
-                >
+                <div className="banner-update-progress-track">
                   <div
+                    className="banner-update-progress-fill"
                     style={{
                       width: `${downloadProgress}%`,
-                      height: '100%',
-                      background: 'var(--accent)',
-                      transition: 'width 0.2s',
                     }}
                   ></div>
                 </div>
               )}
               {updateStatus === 'ready' && (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="banner-update-actions">
                   {platform !== 'darwin' && (
                     <button
-                      className="btn-primary"
+                      className="btn-primary btn-update-banner"
                       onClick={handleRestart}
                       title="Restart to install the update automatically"
-                      style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
                     >
                       Restart & Install
                     </button>
                   )}
                   {platform === 'darwin' && (
                     <button
-                      className="btn-primary"
+                      className="btn-primary btn-update-banner"
                       onClick={() => {
                         if (window.api && window.api.openUrl) {
                           window.api.openUrl(
@@ -610,7 +554,6 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
                         }
                       }}
                       title="Download the newest installer from GitHub"
-                      style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
                     >
                       Download Mac Update
                     </button>
@@ -684,6 +627,7 @@ export const Layout = ({ onLockVault }: { onLockVault?: () => void }) => {
           />
         )}
       </React.Suspense>
-    </div>
+      </div>
+    </GlobalFileDropZone>
   );
 };

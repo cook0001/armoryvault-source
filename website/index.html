@@ -79,7 +79,7 @@
           <img src="/armoryvault/assets/icon.png" alt="ArmoryVault Logo" />
         </div>
         <span>ArmoryVault</span>
-        <span class="brand-tag">v2.11.0</span>
+        <span class="brand-tag">v3.0.0-Electron</span>
       </a>
 
       <ul class="nav-links">
@@ -89,7 +89,7 @@
         <li><a href="#docs" class="nav-link">Guides &amp; Wiki</a></li>
         <li><a href="#security" class="nav-link">Security</a></li>
         <li><a href="#faq" class="nav-link">FAQ</a></li>
-        <li><a href="https://armstrader.store" target="_blank" rel="noopener" class="nav-link nav-link-ecosystem" style="color: var(--accent-cyan); font-weight: 600;" title="Free Firearm Bill of Sale & Range Tools">ArmsTrader Tools ↗</a></li>
+        <li><a href="https://armstrader.store" target="_blank" rel="noopener" class="nav-link nav-link-ecosystem nav-link-cyan" title="Free Firearm Bill of Sale & Range Tools">ArmsTrader Tools ↗</a></li>
       </ul>
 
       <div class="nav-actions">
@@ -119,10 +119,10 @@
     <a href="#docs" class="mobile-nav-link">Guides &amp; Wiki</a>
     <a href="#security" class="mobile-nav-link">Security & Privacy</a>
     <a href="#downloads" class="mobile-nav-link">Downloads</a>
-    <a href="/armoryvault/modules" target="_blank" rel="noopener" class="mobile-nav-link" style="color: var(--accent-cyan);">Modules Hub ↗</a>
-    <a href="https://armstrader.store" target="_blank" rel="noopener" class="mobile-nav-link" style="color: var(--text-secondary);">ArmsTrader Tools ↗</a>
+    <a href="/armoryvault/modules" target="_blank" rel="noopener" class="mobile-nav-link mobile-nav-cyan">Modules Hub ↗</a>
+    <a href="https://armstrader.store" target="_blank" rel="noopener" class="mobile-nav-link mobile-nav-muted">ArmsTrader Tools ↗</a>
     <a href="#faq" class="mobile-nav-link">FAQ</a>
-    <a href="#donate" class="mobile-nav-link" style="color: #60a5fa;">Donate via PayPal</a>
+    <a href="#donate" class="mobile-nav-link mobile-nav-paypal">Donate via PayPal</a>
     <a href="https://github.com/cook0001/ArmoryVault" target="_blank" rel="noopener" class="mobile-nav-link">GitHub Repository ↗</a>
   </div>
 
@@ -132,7 +132,7 @@
       <div class="container">
         <div class="badge-pill">
           <span class="badge-dot"></span>
-          <span>Version <strong>v2.11.0</strong> Live &middot; 100% Offline & Encrypted</span>
+          <span>Version <strong>v3.0.0-Electron</strong> Live &middot; 100% Offline & Encrypted</span>
         </div>
 
         <h1 class="hero-title">
@@ -156,7 +156,7 @@
         </div>
 
         <div class="hero-os-hint">
-          <span class="hero-os-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Auto-detected for your system</span> &middot; 
+          <span class="hero-os-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-chip-align"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Auto-detected for your system</span> &middot; 
           Other platforms: <a href="#download-mac-arm">macOS</a> &middot; <a href="#download-windows">Windows</a> &middot; <a href="#download-linux">Linux</a> &middot; <a href="#download-mobile-spotlight">Android APK</a>
         </div>
 
@@ -197,7 +197,7 @@
                 <span class="window-dot dot-green"></span>
               </div>
               <div class="window-title">ArmoryVault Desktop — Encrypted Local Vault</div>
-              <div style="font-size: 0.72rem; color: var(--accent-emerald); font-weight: 700;">● AES-256 LOCKED</div>
+              <div class="text-locked-status">● AES-256 LOCKED</div>
             </div>
 
             <!-- Desktop View: Real Retina Screenshot -->
@@ -232,53 +232,53 @@
             </div>
 
             <!-- Mobile View (Hidden by default) -->
-            <div class="showcase-body" id="showcase-view-mobile" style="display: none;">
+            <div class="showcase-body is-hidden" id="showcase-view-mobile">
               <div class="mobile-showcase-view">
                 <div class="phone-mockup">
                   <div class="phone-notch"></div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                    <strong style="font-size: 0.9rem; color: #fff;">ArmoryVault Mobile</strong>
-                    <span style="font-size: 0.72rem; color: var(--accent-emerald);">● Paired</span>
+                  <div class="phone-mockup-header">
+                    <strong class="phone-mockup-title">ArmoryVault Mobile</strong>
+                    <span class="phone-mockup-status">● Paired</span>
                   </div>
-                  <div class="phone-card" style="text-align: center; border-color: var(--accent-cyan); margin-top: 18px;">
-                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px;">QUICK BARCODE SCANNER</div>
-                    <div style="background: #000; padding: 12px; border-radius: 8px; display: inline-block;">
+                  <div class="phone-card phone-card-scanner">
+                    <div class="text-muted-xs">QUICK BARCODE SCANNER</div>
+                    <div class="phone-scanner-box">
                       <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="1.5">
                         <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path>
                         <line x1="7" y1="12" x2="17" y2="12" stroke="#ef4444" stroke-width="2"></line>
                       </svg>
                     </div>
-                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 6px;">Scan ammo boxes or QR labels</div>
+                    <div class="text-secondary-xs">Scan ammo boxes or QR labels</div>
                   </div>
                   <div class="phone-card">
-                    <div style="color: var(--text-muted); font-size: 0.72rem;">OFFLINE CACHED VAULT</div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <div class="text-muted-xs">OFFLINE CACHED VAULT</div>
+                    <div class="phone-card-split">
                       <strong>14 Weapons</strong>
-                      <span style="color: var(--accent-cyan); font-weight: 700;">9,420 Rounds</span>
+                      <span class="text-cyan-bold">9,420 Rounds</span>
                     </div>
                   </div>
                   <div class="phone-card">
-                    <div style="color: var(--text-muted); font-size: 0.72rem;">RANGE TRIP LOGGER</div>
-                    <div style="font-size: 0.82rem; margin-top: 4px;">Log rounds fired offline at range. Syncs on local Wi-Fi when home.</div>
+                    <div class="text-muted-xs">RANGE TRIP LOGGER</div>
+                    <div class="phone-card-sub">Log rounds fired offline at range. Syncs on local Wi-Fi when home.</div>
                   </div>
                 </div>
 
-                <div style="max-width: 480px;">
-                  <span class="badge-pill" style="margin-bottom: 12px;">Zero Cloud &bull; Local Router P2P</span>
-                  <h3 style="font-size: 1.6rem; margin-bottom: 12px;">Pocket Companion for the Range</h3>
-                  <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.6;">
+                <div class="phone-companion-side">
+                  <span class="badge-pill">Zero Cloud &bull; Local Router P2P</span>
+                  <h3>Pocket Companion for the Range</h3>
+                  <p>
                     The Mobile Companion connects directly to your desktop over local Wi-Fi. It never routes your inventory through cloud databases or remote servers.
                   </p>
-                  <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px;">
-                    <li style="display: flex; align-items: center; gap: 8px;">
+                  <ul class="phone-features-list">
+                    <li>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       <span><strong>Offline Vault Cache:</strong> View serials &amp; specs with no cellular signal.</span>
                     </li>
-                    <li style="display: flex; align-items: center; gap: 8px;">
+                    <li>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       <span><strong>Target MOA Analyzer:</strong> Measure shot group spread using coin/ruler scale.</span>
                     </li>
-                    <li style="display: flex; align-items: center; gap: 8px;">
+                    <li>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       <span><strong>Direct Phone APK:</strong> Install immediately with no app store logins.</span>
                     </li>
@@ -553,7 +553,7 @@
     </section>
 
     <!-- Zero-Cloud Security & Comparison Section -->
-    <section class="section" id="security" style="background: rgba(11, 15, 25, 0.4);">
+    <section class="section section-security" id="security">
       <div class="container">
         <div class="section-header">
           <span class="section-tag">Privacy Without Compromise</span>
@@ -567,48 +567,48 @@
           <table class="comparison-table">
             <thead>
               <tr>
-                <th style="width: 35%;">Feature / Security Vector</th>
-                <th class="highlight" style="width: 25%;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -2px; margin-right: 4px; color: var(--accent-emerald);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>ArmoryVault</th>
-                <th style="width: 20%;">Cloud Apps</th>
-                <th style="width: 20%;">Excel / Spreadsheets</th>
+                <th class="th-feature">Feature / Security Vector</th>
+                <th class="highlight th-armoryvault"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-emerald-align"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>ArmoryVault</th>
+                <th class="th-cloud">Cloud Apps</th>
+                <th class="th-excel">Excel / Spreadsheets</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td><strong>Data Storage Location</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">100% Local (Your Machine)</td>
-                <td style="color: var(--accent-rose);">Remote Cloud Server</td>
+                <td class="highlight table-cell-emerald-bold">100% Local (Your Machine)</td>
+                <td class="table-cell-rose">Remote Cloud Server</td>
                 <td>Local File</td>
               </tr>
               <tr>
                 <td><strong>Encryption Standard</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">AES-256 PBKDF2 (100k rounds)</td>
+                <td class="highlight table-cell-emerald-bold">AES-256 PBKDF2 (100k rounds)</td>
                 <td>Variable (Host holds keys)</td>
-                <td style="color: var(--accent-rose);">None / Plaintext</td>
+                <td class="table-cell-rose">None / Plaintext</td>
               </tr>
               <tr>
                 <td><strong>Account or Email Required</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">Never (No Account)</td>
-                <td style="color: var(--accent-rose);">Mandatory Email/Login</td>
-                <td style="color: var(--accent-emerald);">None</td>
+                <td class="highlight table-cell-emerald-bold">Never (No Account)</td>
+                <td class="table-cell-rose">Mandatory Email/Login</td>
+                <td class="table-cell-emerald">None</td>
               </tr>
               <tr>
                 <td><strong>ATF Bound Book &amp; Dossier PDF</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">Built-in 8.5x11 Print Engine</td>
+                <td class="highlight table-cell-emerald-bold">Built-in 8.5x11 Print Engine</td>
                 <td>Limited / Extra Fee</td>
-                <td style="color: var(--accent-rose);">Manual Formatting</td>
+                <td class="table-cell-rose">Manual Formatting</td>
               </tr>
               <tr>
                 <td><strong>Live Telemetry &amp; Round Counts</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">Atomic Range Trip Logger</td>
+                <td class="highlight table-cell-emerald-bold">Atomic Range Trip Logger</td>
                 <td>Manual Form Entries</td>
-                <td style="color: var(--accent-rose);">Manual Math / Formulas</td>
+                <td class="table-cell-rose">Manual Math / Formulas</td>
               </tr>
               <tr>
                 <td><strong>Mobile Sync Method</strong></td>
-                <td class="highlight" style="color: var(--accent-emerald); font-weight: 700;">Local Wi-Fi P2P (No Cloud)</td>
-                <td style="color: var(--accent-rose);">Public Cloud API</td>
-                <td style="color: var(--accent-rose);">Cloud Storage Sync</td>
+                <td class="highlight table-cell-emerald-bold">Local Wi-Fi P2P (No Cloud)</td>
+                <td class="table-cell-rose">Public Cloud API</td>
+                <td class="table-cell-rose">Cloud Storage Sync</td>
               </tr>
             </tbody>
           </table>
@@ -630,7 +630,7 @@
         <div class="download-grid">
           <!-- macOS Apple Silicon Card -->
           <div class="download-card" id="download-mac-arm">
-            <div class="os-icon" style="display: flex; justify-content: center; align-items: center; min-height: 42px;">
+            <div class="os-icon os-icon-centered">
               <svg width="34" height="34" viewBox="0 0 170 170" fill="currentColor">
                 <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12-14.3-5.59-8.4-10.08-18.42-13.48-30.08-3.4-11.65-5.1-23.1-5.1-34.34 0-14.73 3.65-27.12 10.96-37.17 7.3-10.05 16.74-15.19 28.32-15.42 4.47 0 9.47 1.15 15 3.44 5.54 2.3 9.43 3.51 11.67 3.64 2.02-.13 5.92-1.34 11.7-3.64 5.79-2.3 10.74-3.41 14.86-3.32 10.37.52 18.99 4.38 25.86 11.58-9.04 5.54-13.52 13.3-13.43 23.27.09 7.74 3.06 14.37 8.92 19.89 5.86 5.52 12.98 8.61 21.36 9.27-2.61 8.04-5.99 16.08-10.14 24.13zm-27.1-105.74c0 5.88-2.18 11.5-6.55 16.86-4.36 5.36-9.84 8.79-16.44 10.3-.77-1.42-1.16-3.01-1.16-4.78 0-5.74 2.29-11.44 6.87-17.1 4.58-5.65 10.17-9.05 16.77-10.2.22 1.62.51 3.26.51 4.92z"/>
               </svg>
@@ -645,7 +645,7 @@
 
           <!-- macOS Intel Card -->
           <div class="download-card" id="download-mac-intel">
-            <div class="os-icon" style="display: flex; justify-content: center; align-items: center; min-height: 42px;">
+            <div class="os-icon os-icon-centered">
               <svg width="34" height="34" viewBox="0 0 170 170" fill="currentColor">
                 <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.7-7.85-12-14.3-5.59-8.4-10.08-18.42-13.48-30.08-3.4-11.65-5.1-23.1-5.1-34.34 0-14.73 3.65-27.12 10.96-37.17 7.3-10.05 16.74-15.19 28.32-15.42 4.47 0 9.47 1.15 15 3.44 5.54 2.3 9.43 3.51 11.67 3.64 2.02-.13 5.92-1.34 11.7-3.64 5.79-2.3 10.74-3.41 14.86-3.32 10.37.52 18.99 4.38 25.86 11.58-9.04 5.54-13.52 13.3-13.43 23.27.09 7.74 3.06 14.37 8.92 19.89 5.86 5.52 12.98 8.61 21.36 9.27-2.61 8.04-5.99 16.08-10.14 24.13zm-27.1-105.74c0 5.88-2.18 11.5-6.55 16.86-4.36 5.36-9.84 8.79-16.44 10.3-.77-1.42-1.16-3.01-1.16-4.78 0-5.74 2.29-11.44 6.87-17.1 4.58-5.65 10.17-9.05 16.77-10.2.22 1.62.51 3.26.51 4.92z"/>
               </svg>
@@ -660,7 +660,7 @@
 
           <!-- Windows Card -->
           <div class="download-card" id="download-windows">
-            <div class="os-icon" style="display: flex; justify-content: center; align-items: center; min-height: 42px;">
+            <div class="os-icon os-icon-centered">
               <svg width="32" height="32" viewBox="0 0 88 88" fill="currentColor">
                 <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48.016 45.728zm4.326-39.027L87.914 0v41.527l-47.918.376zm47.918 43.935v41.699l-47.918-6.744V48.749z"/>
               </svg>
@@ -675,7 +675,7 @@
 
           <!-- Linux Card -->
           <div class="download-card" id="download-linux">
-            <div class="os-icon" style="display: flex; justify-content: center; align-items: center; min-height: 42px;">
+            <div class="os-icon os-icon-centered">
               <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.002 0c-2.463 0-4.458 1.996-4.458 4.458 0 .426.06.837.172 1.226C6.447 6.43 5.41 7.82 5.41 9.47v4.673c0 2.27 1.343 4.22 3.284 5.127-.123.633-.196 1.288-.196 1.96 0 1.53.38 2.77 1.5 2.77.585 0 1.25-.335 1.998-.335.753 0 1.42.335 2.007.335 1.118 0 1.5-1.24 1.5-2.77 0-.672-.073-1.327-.196-1.96 1.941-.907 3.284-2.857 3.284-5.127V9.47c0-1.65-1.037-3.04-2.306-3.786.112-.389.172-.8.172-1.226C16.457 1.996 14.465 0 12.002 0zm-1.68 3.424c.465 0 .843.377.843.842 0 .466-.378.843-.843.843-.466 0-.843-.377-.843-.843 0-.465.377-.842.843-.842zm3.36 0c.465 0 .843.377.843.842 0 .466-.378.843-.843.843-.466 0-.843-.377-.843-.843 0-.465.377-.842.843-.842z"/>
               </svg>
@@ -692,23 +692,23 @@
         <!-- Android Mobile Companion Spotlight Banner with Direct QR Code -->
         <div class="mobile-download-spotlight" id="download-mobile-spotlight">
           <div class="mobile-spotlight-info">
-            <div class="badge-pill" style="align-self: flex-start; margin-bottom: 10px;">
+            <div class="badge-pill spotlight-badge-margin">
               <span>Android Mobile Companion &bull; v2.7.12</span>
             </div>
             <h3 class="mobile-spotlight-title">
-              <img src="/armoryvault/assets/mobile-icon.png" alt="ArmoryVault Companion Mobile Icon" style="width: 38px; height: 38px; border-radius: 9px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0;" />
+              <img src="/armoryvault/assets/mobile-icon.png" alt="ArmoryVault Companion Mobile Icon" class="mobile-spotlight-icon" />
               <span>Install Directly on Your Smartphone</span>
             </h3>
             <p class="mobile-spotlight-desc">
               Scan the QR code with your smartphone camera to download the Android APK directly. No PC cables or account creation required. Enjoy offline vault access, barcode scanning, DOPE ballistics, and local Wi-Fi sync.
             </p>
             <div class="mobile-spotlight-features">
-              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>100% Zero-Cloud P2P</span>
-              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Universal Barcode &amp; DL Scanner</span>
-              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Target MOA Grouping</span>
-              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Direct Phone Download</span>
+              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>100% Zero-Cloud P2P</span>
+              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Universal Barcode &amp; DL Scanner</span>
+              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Target MOA Grouping</span>
+              <span class="mobile-spotlight-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Direct Phone Download</span>
             </div>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="spotlight-tags-cluster">
               <a href="https://github.com/cook0001/ArmoryVault-Companion-App/releases/latest/download/app-release.apk" class="btn btn-emerald btn-sm">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span>Download .apk (Direct)</span>
@@ -733,15 +733,15 @@
 
         <!-- Terminal Gatekeeper / Quarantine Helper -->
         <div class="terminal-box">
-          <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-            <span style="color: var(--text-muted);">$</span>
-            <span style="color: #cbd5e1;">xattr -cr /Applications/ArmoryVault.app</span>
+          <div class="terminal-line-flex">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-cmd">xattr -cr /Applications/ArmoryVault.app</span>
           </div>
           <button class="btn-copy-cmd" data-cmd="xattr -cr /Applications/ArmoryVault.app" aria-label="Copy macOS Gatekeeper command">
             <span>Copy macOS Fix</span>
           </button>
         </div>
-        <p style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+        <p class="terminal-note">
           Open-source community software is not signed with costly enterprise certificates. Run this terminal command after dragging to Applications if macOS Gatekeeper flags the binary.
         </p>
       </div>
@@ -769,7 +769,7 @@
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input type="text" id="doc-search-input" class="doc-search-input" placeholder="Search guides, commands, or troubleshooting (e.g. 'pairing', 'xattr', '+P', 'backup')..." aria-label="Search documentation guides">
-            <button id="doc-search-clear" class="doc-search-clear" aria-label="Clear search query" style="display: none;">
+            <button id="doc-search-clear" class="doc-search-clear is-hidden" aria-label="Clear search query">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>
@@ -792,7 +792,7 @@
           <details class="doc-item" name="armory-kb" data-category="getting-started" id="guide-mac-install">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                <span class="doc-icon-badge doc-badge-blue">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 </span>
                 <div class="doc-header-text">
@@ -810,8 +810,8 @@
               <h4>Step-by-Step Installation:</h4>
               <ol class="doc-steps">
                 <li>Download the appropriate <code class="doc-inline-code">.dmg</code> for your Mac architecture from the <a href="#downloads">Downloads section</a>.</li>
-                <li>Double-click the disk image and drag <strong style="color: var(--text-primary);">ArmoryVault.app</strong> directly into your <strong style="color: var(--text-primary);">Applications</strong> folder.</li>
-                <li><strong>Option A (GUI)</strong>: In Finder, navigate to Applications, right-click (or Control-click) <strong style="color: var(--text-primary);">ArmoryVault.app</strong>, click <strong style="color: var(--text-primary);">Open</strong>, and confirm <strong style="color: var(--text-primary);">Open</strong> in the system prompt.</li>
+                <li>Double-click the disk image and drag <strong>ArmoryVault.app</strong> directly into your <strong>Applications</strong> folder.</li>
+                <li><strong>Option A (GUI)</strong>: In Finder, navigate to Applications, right-click (or Control-click) <strong>ArmoryVault.app</strong>, click <strong>Open</strong>, and confirm <strong>Open</strong> in the system prompt.</li>
                 <li><strong>Option B (Terminal Fix)</strong>: Open Terminal and run the quarantine clearing command:</li>
               </ol>
               <div class="doc-code-block">
@@ -829,7 +829,7 @@
           <details class="doc-item" name="armory-kb" data-category="getting-started" id="guide-windows-install">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(0, 210, 255, 0.15); color: #00d2ff;">
+                <span class="doc-icon-badge doc-badge-cyan">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </span>
                 <div class="doc-header-text">
@@ -846,15 +846,15 @@
               </p>
               <h4>Installation Instructions:</h4>
               <ol class="doc-steps">
-                <li>Download <code class="doc-inline-code">ArmoryVault-Setup-2.11.0.exe</code>.</li>
+                <li>Download <code class="doc-inline-code">ArmoryVault-Setup-3.0.0-Electron.exe</code>.</li>
                 <li>Double-click the setup file to launch the installation wizard.</li>
                 <li>If Microsoft Defender SmartScreen displays <em>"Windows protected your PC"</em>:
-                  <ul style="margin-top: 6px; padding-left: 20px;">
-                    <li>Click <strong style="color: var(--text-primary);">More info</strong>.</li>
-                    <li>Click <strong style="color: var(--text-primary);">Run anyway</strong>.</li>
+                  <ul class="doc-sublist">
+                    <li>Click <strong>More info</strong>.</li>
+                    <li>Click <strong>Run anyway</strong>.</li>
                   </ul>
                 </li>
-                <li>When prompted by Windows Defender Firewall for network permissions, check <strong style="color: var(--text-primary);">Private networks</strong> to allow the Mobile Companion app to discover the desktop over local Wi-Fi.</li>
+                <li>When prompted by Windows Defender Firewall for network permissions, check <strong>Private networks</strong> to allow the Mobile Companion app to discover the desktop over local Wi-Fi.</li>
               </ol>
             </div>
           </details>
@@ -863,7 +863,7 @@
           <details class="doc-item" name="armory-kb" data-category="getting-started" id="guide-linux-install">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                <span class="doc-icon-badge doc-badge-amber">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
                 </span>
                 <div class="doc-header-text">
@@ -880,10 +880,10 @@
               </p>
               <h4>Running the AppImage:</h4>
               <div class="doc-code-block">
-                <code>chmod +x ArmoryVault-2.11.0.AppImage &amp;&amp; ./ArmoryVault-2.11.0.AppImage</code>
-                <button type="button" class="btn-copy-cmd" data-cmd="chmod +x ArmoryVault-2.11.0.AppImage &amp;&amp; ./ArmoryVault-2.11.0.AppImage" aria-label="Copy Linux execution command">Copy Command</button>
+                <code>chmod +x ArmoryVault-3.0.0-Electron.AppImage &amp;&amp; ./ArmoryVault-3.0.0-Electron.AppImage</code>
+                <button type="button" class="btn-copy-cmd" data-cmd="chmod +x ArmoryVault-3.0.0-Electron.AppImage &amp;&amp; ./ArmoryVault-3.0.0-Electron.AppImage" aria-label="Copy Linux execution command">Copy Command</button>
               </div>
-              <p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);">
+              <p class="doc-note-text">
                 You may also move the AppImage to <code class="doc-inline-code">~/.local/bin/</code> or register it with AppImageLauncher for automatic desktop launcher integration.
               </p>
             </div>
@@ -893,7 +893,7 @@
           <details class="doc-item" name="armory-kb" data-category="getting-started" id="guide-android-install">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <span class="doc-icon-badge doc-badge-emerald">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                 </span>
                 <div class="doc-header-text">
@@ -910,14 +910,14 @@
               </p>
               <h4>First-Time Installation:</h4>
               <ol class="doc-steps">
-                <li>Download <strong style="color: var(--text-primary);">app-release.apk</strong> directly on your Android phone from the website download card or GitHub Releases.</li>
+                <li>Download <strong>app-release.apk</strong> directly on your Android phone from the website download card or GitHub Releases.</li>
                 <li>Tap the downloaded file. When prompted with <em>"For your security, your phone is not allowed to install unknown apps"</em>:
-                  <ul style="margin-top: 6px; padding-left: 20px;">
-                    <li>Tap <strong style="color: var(--text-primary);">Settings</strong>.</li>
-                    <li>Toggle ON <strong style="color: var(--text-primary);">Allow from this source</strong>.</li>
+                  <ul class="doc-sublist">
+                    <li>Tap <strong>Settings</strong>.</li>
+                    <li>Toggle ON <strong>Allow from this source</strong>.</li>
                   </ul>
                 </li>
-                <li>Tap <strong style="color: var(--text-primary);">Install</strong> to complete setup.</li>
+                <li>Tap <strong>Install</strong> to complete setup.</li>
               </ol>
               <div class="doc-callout doc-callout-info">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
@@ -930,7 +930,7 @@
           <details class="doc-item" name="armory-kb" data-category="pairing" id="guide-lan-pairing">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(0, 210, 255, 0.15); color: #00d2ff;">
+                <span class="doc-icon-badge doc-badge-cyan">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
                 </span>
                 <div class="doc-header-text">
@@ -948,8 +948,8 @@
               <h4>How to Pair Desktop &amp; Mobile:</h4>
               <ol class="doc-steps">
                 <li>Connect your computer and smartphone to the <strong>same Wi-Fi router</strong> or local home network.</li>
-                <li>In ArmoryVault Desktop, click the <strong style="color: var(--text-primary);">Companion Sync</strong> tab. The desktop displays a secure QR pairing code containing an ephemeral handshake token and your local IP address.</li>
-                <li>On your phone, open ArmoryVault Companion and tap <strong style="color: var(--text-primary);">Pair Vault</strong> (or the camera scan button).</li>
+                <li>In ArmoryVault Desktop, click the <strong>Companion Sync</strong> tab. The desktop displays a secure QR pairing code containing an ephemeral handshake token and your local IP address.</li>
+                <li>On your phone, open ArmoryVault Companion and tap <strong>Pair Vault</strong> (or the camera scan button).</li>
                 <li>Aim your camera at the desktop screen to scan the QR code.</li>
                 <li>The devices establish an encrypted connection over your local LAN. Your firearms, ammo inventory, and storage locations will synchronize in seconds.</li>
               </ol>
@@ -960,7 +960,7 @@
           <details class="doc-item" name="armory-kb" data-category="pairing" id="guide-pairing-troubleshooting">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+                <span class="doc-icon-badge doc-badge-rose">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 </span>
                 <div class="doc-header-text">
@@ -986,7 +986,7 @@
           <details class="doc-item" name="armory-kb" data-category="inventory" id="guide-storage-qr">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <span class="doc-icon-badge doc-badge-emerald">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1003,10 +1003,10 @@
               </p>
               <h4>Workflow:</h4>
               <ol class="doc-steps">
-                <li>Go to the <strong style="color: var(--text-primary);">Storage Containers</strong> tab in ArmoryVault.</li>
+                <li>Go to the <strong>Storage Containers</strong> tab in ArmoryVault.</li>
                 <li>Create your physical containers (e.g. <em>"Liberty 48-Gun Safe"</em>, <em>"50-Cal Green Ammo Can #2"</em>, <em>"Range Bag Side Pocket"</em>).</li>
                 <li>Assign firearms, magazines, and ammo stock directly to each container.</li>
-                <li>Click <strong style="color: var(--text-primary);">Print QR Sticker</strong> to export formatted labels for standard adhesive paper.</li>
+                <li>Click <strong>Print QR Sticker</strong> to export formatted labels for standard adhesive paper.</li>
                 <li>Affix the QR sticker to the outside of your safe or ammo can.</li>
                 <li>At any time, open the Mobile Companion app camera, scan the container's sticker, and view its live contents instantly!</li>
               </ol>
@@ -1017,7 +1017,7 @@
           <details class="doc-item" name="armory-kb" data-category="inventory" id="guide-ammo-overpressure">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                <span class="doc-icon-badge doc-badge-amber">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1045,7 +1045,7 @@
           <details class="doc-item" name="armory-kb" data-category="inventory" id="guide-shotgun-specs">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                <span class="doc-icon-badge doc-badge-indigo">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1071,7 +1071,7 @@
           <details class="doc-item" name="armory-kb" data-category="range-compliance" id="guide-chronograph">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <span class="doc-icon-badge doc-badge-emerald">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1088,10 +1088,10 @@
               </p>
               <ul class="doc-steps">
                 <li><strong>Velocity String Statistics</strong>: Enter shot velocity sequences (FPS) from your Garmin Xero C1 Pro, LabRadar, or optical chrony. ArmoryVault automatically calculates:
-                  <ul style="margin-top: 6px; padding-left: 20px;">
-                    <li><strong style="color: var(--text-primary);">Average Velocity (AVG)</strong></li>
-                    <li><strong style="color: var(--text-primary);">Standard Deviation (SD)</strong></li>
-                    <li><strong style="color: var(--text-primary);">Extreme Spread (ES)</strong></li>
+                  <ul class="doc-sublist">
+                    <li><strong>Average Velocity (AVG)</strong></li>
+                    <li><strong>Standard Deviation (SD)</strong></li>
+                    <li><strong>Extreme Spread (ES)</strong></li>
                   </ul>
                 </li>
                 <li><strong>Shot Grouping Calculator</strong>: Upload target photos, specify distance in yards or meters, and calculate extreme spread in inches and true Minutes of Angle (MOA).</li>
@@ -1103,7 +1103,7 @@
           <details class="doc-item" name="armory-kb" data-category="range-compliance" id="guide-atf-boundbook">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                <span class="doc-icon-badge doc-badge-blue">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1121,7 +1121,7 @@
               <ul class="doc-steps">
                 <li><strong>ATF Acquisition &amp; Disposition (A&amp;D) Bound Book</strong>: Generates standard formatted ledgers tracking firearm Manufacturer, Importer, Model, Serial Number, Type, Caliber, Acquisition Date/Source, and Disposition Date/Recipient.</li>
                 <li><strong>PDF / CSV Export</strong>: 1-click generation of PDF records for offline physical binders or encrypted archival.</li>
-                <li><strong>Private Firearms Bill of Sale</strong>: Automatically compiles firearm metadata, buyer/seller credentials, and digital signature boxes into legally sound transfer agreements, stored securely in your vault database. For quick in-person parking lot transfers, you can also use our free companion web generator at <a href="https://armstrader.store/bill-of-sale" target="_blank" rel="noopener noreferrer" style="color: var(--accent-emerald); font-weight: 600; text-decoration: underline;">ArmsTrader.store</a>.</li>
+                <li><strong>Private Firearms Bill of Sale</strong>: Automatically compiles firearm metadata, buyer/seller credentials, and digital signature boxes into legally sound transfer agreements, stored securely in your vault database. For quick in-person parking lot transfers, you can also use our free companion web generator at <a href="https://armstrader.store/bill-of-sale" target="_blank" rel="noopener noreferrer" class="link-emerald-underline">ArmsTrader.store</a>.</li>
               </ul>
             </div>
           </details>
@@ -1130,7 +1130,7 @@
           <details class="doc-item" name="armory-kb" data-category="security" id="guide-encrypted-backups">
             <summary class="doc-summary">
               <div class="doc-summary-left">
-                <span class="doc-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <span class="doc-icon-badge doc-badge-emerald">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </span>
                 <div class="doc-header-text">
@@ -1148,8 +1148,8 @@
               <h4>Best Practices for Cold Storage &amp; Migration:</h4>
               <ol class="doc-steps">
                 <li><strong>Record Your 24-Word Recovery Key</strong>: Upon initial vault setup, write down your mnemonic recovery phrase on physical paper and store it in your fireproof safe.</li>
-                <li><strong>Export Encrypted Backups</strong>: In Settings -> Backup Vault, click <strong style="color: var(--text-primary);">Export Encrypted Database</strong>. Save the resulting encrypted <code class="doc-inline-code">.avdb</code> file to an external USB flash drive or cold storage device.</li>
-                <li><strong>Migrating to a New Computer</strong>: Install ArmoryVault on your new machine, click <strong style="color: var(--text-primary);">Restore from Backup</strong>, select your <code class="doc-inline-code">.avdb</code> file, enter your master password, and your entire collection is immediately restored.</li>
+                <li><strong>Export Encrypted Backups</strong>: In Settings -> Backup Vault, click <strong>Export Encrypted Database</strong>. Save the resulting encrypted <code class="doc-inline-code">.avdb</code> file to an external USB flash drive or cold storage device.</li>
+                <li><strong>Migrating to a New Computer</strong>: Install ArmoryVault on your new machine, click <strong>Restore from Backup</strong>, select your <code class="doc-inline-code">.avdb</code> file, enter your master password, and your entire collection is immediately restored.</li>
               </ol>
             </div>
           </details>
@@ -1157,11 +1157,11 @@
         </div>
 
         <!-- No Results Fallback -->
-        <div id="doc-no-results" class="doc-no-results" style="display: none;">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted); margin-bottom: 12px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <div id="doc-no-results" class="doc-no-results is-hidden">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="doc-no-results-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <h4>No matching guides found</h4>
           <p>Try searching for different keywords like <em>"install"</em>, <em>"pairing"</em>, <em>"+P"</em>, <em>"gatekeeper"</em>, or <em>"backup"</em>.</p>
-          <button type="button" id="btn-reset-doc-filters" class="btn btn-secondary btn-sm" style="margin-top: 14px;">Reset Filters</button>
+          <button type="button" id="btn-reset-doc-filters" class="btn btn-secondary btn-sm btn-doc-reset">Reset Filters</button>
         </div>
 
       </div>
@@ -1171,13 +1171,13 @@
     <!-- Community & Feedback Hub -->
     <section class="section" id="feedback">
       <div class="container">
-        <div class="support-card" style="margin-bottom: 40px; border-color: rgba(255, 255, 255, 0.1);">
+        <div class="support-card support-card-spaced">
           <span class="section-tag">Open Source Community</span>
           <h2 class="support-title">Shaped by Collectors &amp; Reloaders</h2>
           <p class="support-desc">
             ArmoryVault is 100% open-source software built for the firearms community. Have a feature suggestion, new caliber request, or issue to report?
           </p>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;">
+          <div class="donate-chips-wrap">
             <a href="https://github.com/cook0001/ArmoryVault/issues/new?template=feature_request.md" target="_blank" rel="noopener" class="btn btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
               <span>Suggest a Feature</span>
@@ -1199,8 +1199,8 @@
     <section class="support-section" id="donate">
       <div class="container">
         <div class="support-card">
-          <div class="badge-pill" style="margin-bottom: 14px;">
-            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -2px; margin-right: 4px; color: #f59e0b;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>100% Free &amp; Open-Source</span>
+          <div class="badge-pill badge-pill-donate">
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-gold"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>100% Free &amp; Open-Source</span>
           </div>
           <h2 class="support-title">Support ArmoryVault Development</h2>
           <p class="support-desc">
@@ -1210,23 +1210,23 @@
           <div class="donation-presets-grid">
             <button type="button" class="donation-chip" data-amount="5">
               <span class="chip-amount">$5</span>
-              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>Coffee</span>
+              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>Coffee</span>
             </button>
             <button type="button" class="donation-chip" data-amount="15">
               <span class="chip-amount">$15</span>
-              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Supporter</span>
+              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Supporter</span>
             </button>
             <button type="button" class="donation-chip active" data-amount="25">
               <span class="chip-amount">$25</span>
-              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Patron</span>
+              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Patron</span>
             </button>
             <button type="button" class="donation-chip" data-amount="50">
               <span class="chip-amount">$50</span>
-              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Champion</span>
+              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Champion</span>
             </button>
             <button type="button" class="donation-chip" data-amount="100">
               <span class="chip-amount">$100</span>
-              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Sponsor</span>
+              <span class="chip-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-chip-align"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Sponsor</span>
             </button>
           </div>
 
@@ -1313,11 +1313,11 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="brand-icon" style="width: 28px; height: 28px;">
+          <div class="footer-brand-wrap">
+            <div class="brand-icon footer-brand-icon">
               <img src="/armoryvault/assets/icon.png" alt="ArmoryVault" />
             </div>
-            <strong style="font-size: 1.15rem; color: #fff;">ArmoryVault</strong>
+            <strong class="footer-brand-title">ArmoryVault</strong>
           </div>
           <p>
             Private, encrypted, and air-gapped firearm, ammunition, and reloading component inventory software.
@@ -1329,7 +1329,7 @@
           <ul class="footer-links">
             <li><a href="#downloads" class="footer-link">Download Desktop</a></li>
             <li><a href="#modules" class="footer-link">Modular Extensions</a></li>
-            <li><a href="/armoryvault/modules" target="_blank" rel="noopener" class="footer-link" style="color: var(--accent-cyan);">Modules Web Hub ↗</a></li>
+            <li><a href="/armoryvault/modules" target="_blank" rel="noopener" class="footer-link footer-link-cyan">Modules Web Hub ↗</a></li>
             <li><a href="#download-mobile-spotlight" class="footer-link">Android APK</a></li>
             <li><a href="#docs" class="footer-link">Guides &amp; Wiki</a></li>
             <li><a href="https://github.com/cook0001/ArmoryVault/releases" target="_blank" rel="noopener" class="footer-link">Release Notes</a></li>
@@ -1354,7 +1354,7 @@
             <li><a href="https://github.com/cook0001/ArmoryVault-Modules" target="_blank" rel="noopener" class="footer-link">Modules Repository</a></li>
             <li><a href="#feedback" class="footer-link">Feature Suggestions</a></li>
             <li><a href="#feedback" class="footer-link">Bug Reports</a></li>
-            <li><a href="#donate" class="footer-link" style="color: #60a5fa;">Donate via PayPal</a></li>
+            <li><a href="#donate" class="footer-link footer-link-paypal">Donate via PayPal</a></li>
           </ul>
         </div>
       </div>
@@ -1363,12 +1363,12 @@
         <div>
           &copy; 2026 ArmoryVault. Open-source software released under the ISC / MIT License.
         </div>
-        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-          <a href="/armoryvault/privacy" style="color: var(--text-secondary);">Privacy Policy</a>
-          <a href="/armoryvault/modules" target="_blank" rel="noopener" style="color: var(--accent-cyan);">Modules Catalog</a>
-          <a href="https://paypal.me/ArmoryVault" target="_blank" rel="noopener" style="color: #60a5fa;">Donate (PayPal)</a>
-          <a href="https://github.com/cook0001/ArmoryVault" target="_blank" rel="noopener" style="color: var(--text-secondary);">GitHub</a>
-          <a href="https://armstrader.store" target="_blank" rel="noopener" style="color: var(--text-secondary);">ArmsTrader.store</a>
+        <div class="footer-bottom-links">
+          <a href="/armoryvault/privacy" class="footer-link-subtle">Privacy Policy</a>
+          <a href="/armoryvault/modules" target="_blank" rel="noopener" class="footer-link-cyan">Modules Catalog</a>
+          <a href="https://paypal.me/ArmoryVault" target="_blank" rel="noopener" class="footer-link-paypal">Donate (PayPal)</a>
+          <a href="https://github.com/cook0001/ArmoryVault" target="_blank" rel="noopener" class="footer-link-subtle">GitHub</a>
+          <a href="https://armstrader.store" target="_blank" rel="noopener" class="footer-link-subtle">ArmsTrader.store</a>
         </div>
       </div>
     </div>
@@ -1385,10 +1385,10 @@
             <span class="window-dot dot-green"></span>
           </div>
           <span class="lightbox-title">ArmoryVault Desktop — Tactical Gear &amp; Optics Ledger</span>
-          <span class="badge-pill sm" style="font-size:0.68rem; padding: 2px 8px;">2880 x 1586 Retina</span>
+          <span class="badge-pill sm badge-retina">2880 x 1586 Retina</span>
         </div>
         <form method="dialog">
-          <button class="lightbox-close-btn" aria-label="Close preview" autofocus>
+          <button type="submit" class="lightbox-close-btn" aria-label="Close preview" autofocus>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </form>

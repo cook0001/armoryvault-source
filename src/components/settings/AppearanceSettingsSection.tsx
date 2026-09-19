@@ -45,79 +45,35 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
   onWidgetToggle,
 }) => {
   return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border-light)',
-        borderRadius: '12px',
-        padding: '1.25rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Palette size={18} style={{ color: 'var(--accent)' }} />
-          <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 600 }}>
+    <div className="settings-section-card">
+      <div className="settings-section-title-row">
+        <div className="settings-section-header">
+          <Palette size={18} className="settings-section-icon" />
+          <h3 className="settings-section-title">
             Appearance & Personalization
           </h3>
         </div>
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-reset-defaults-btn"
           onClick={onResetTheme}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.35rem 0.65rem',
-            fontSize: '0.75rem',
-            borderRadius: '6px',
-          }}
           title="Reset all themes, typography, density, and widget settings to defaults"
         >
           <RotateCcw size={13} />
-          Reset Defaults
+          <span>Reset Defaults</span>
         </button>
       </div>
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: '0.85rem',
-          margin: '0 0 1.25rem',
-        }}
-      >
+      <p className="settings-section-desc">
         Configure tactical accent palettes, OLED/ambient canvas backgrounds, interface density,
         typography, discretion mode, and modular widget visibility.
       </p>
 
       {/* 1. Tactical Color Themes */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div
-          style={{
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            marginBottom: '0.6rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-          }}
-        >
+      <div className="settings-sub-group">
+        <div className="settings-group-label">
           Tactical Accent Palettes
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
-            gap: '0.5rem',
-            marginBottom: '0.75rem',
-          }}
-        >
+        <div className="settings-palettes-grid">
           {Object.values(ACCENT_PRESETS).map((preset) => {
             const isSelected = theme.accent === preset.id;
             return (
@@ -125,69 +81,30 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                 key={preset.id}
                 type="button"
                 onClick={() => onAccentChange(preset.id)}
+                className={`settings-palette-item ${isSelected ? 'active' : ''}`}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 0.65rem',
-                  borderRadius: '8px',
-                  border: isSelected
-                    ? `1px solid ${preset.primary}`
-                    : '1px solid var(--border-light)',
-                  background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? `0 0 10px ${preset.glow}` : 'none',
+                  borderColor: isSelected ? preset.primary : undefined,
+                  boxShadow: isSelected ? `0 0 10px ${preset.glow}` : undefined,
                 }}
               >
                 <span
+                  className="settings-palette-swatch"
                   style={{
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
                     backgroundColor: preset.primary,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     boxShadow: `0 0 6px ${preset.primary}`,
                   }}
                 />
-                <span
-                  style={{
-                    fontSize: '0.78rem',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    fontWeight: isSelected ? 600 : 400,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    flex: 1,
-                  }}
-                >
+                <span className="settings-palette-name">
                   {preset.name}
                 </span>
-                {isSelected && <Check size={13} style={{ color: preset.primary, flexShrink: 0 }} />}
+                {isSelected && <Check size={13} style={{ color: preset.primary }} />}
               </button>
             );
           })}
         </div>
 
         {/* Custom Hex Accent Row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            background: 'rgba(0, 0, 0, 0.2)',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '8px',
-            border:
-              theme.accent === 'custom'
-                ? '1px solid var(--accent)'
-                : '1px solid var(--border-light)',
-          }}
-        >
+        <div className={`settings-hex-row ${theme.accent === 'custom' ? 'active' : ''}`}>
           <input
             type="color"
             value={customColor}
@@ -195,22 +112,14 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
               onCustomColorChange(e.target.value);
               onAccentChange('custom', e.target.value);
             }}
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              border: 'none',
-              cursor: 'pointer',
-              background: 'transparent',
-              padding: 0,
-            }}
+            className="settings-hex-color-picker"
             title="Choose custom hex accent color"
           />
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+          <div className="settings-hex-text-col">
+            <span className="settings-hex-title">
               Custom Accent Color
             </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            <span className="settings-hex-subtitle">
               Personalize with any custom RGB / Hex value
             </span>
           </div>
@@ -225,29 +134,10 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
               }
             }}
             placeholder="#3b82f6"
-            style={{
-              width: '85px',
-              padding: '0.35rem 0.5rem',
-              borderRadius: '6px',
-              background: 'rgba(0, 0, 0, 0.4)',
-              border: '1px solid var(--border-light)',
-              color: 'var(--text-primary)',
-              fontSize: '0.8rem',
-              fontFamily: 'monospace',
-              textAlign: 'center',
-            }}
+            className="settings-hex-input"
           />
           {theme.accent === 'custom' && (
-            <span
-              style={{
-                fontSize: '0.72rem',
-                color: 'var(--accent)',
-                fontWeight: 600,
-                padding: '0.2rem 0.5rem',
-                background: 'rgba(255,255,255,0.06)',
-                borderRadius: '4px',
-              }}
-            >
+            <span className="settings-active-badge">
               Active
             </span>
           )}
@@ -255,24 +145,11 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
       </div>
 
       {/* 2. Canvas Background Style */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div
-          style={{
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            marginBottom: '0.6rem',
-          }}
-        >
+      <div className="settings-sub-group">
+        <div className="settings-group-label">
           Canvas Background Style
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '0.5rem',
-          }}
-        >
+        <div className="settings-canvas-grid">
           {[
             { id: 'mesh', label: 'Tactical Mesh', desc: 'Radial Glow' },
             { id: 'oled', label: 'OLED Pure Black', desc: '#000000 True' },
@@ -285,25 +162,12 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                 key={canvasOpt.id}
                 type="button"
                 onClick={() => onCanvasChange(canvasOpt.id as CanvasStyle)}
-                style={{
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-light)',
-                  background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                  color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'center',
-                }}
+                className={`settings-canvas-btn ${isSelected ? 'active' : ''}`}
               >
-                <span style={{ fontSize: '0.8rem', fontWeight: isSelected ? 600 : 400 }}>
+                <span className="settings-canvas-label">
                   {canvasOpt.label}
                 </span>
-                <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>{canvasOpt.desc}</span>
+                <span className="settings-canvas-desc">{canvasOpt.desc}</span>
               </button>
             );
           })}
@@ -311,27 +175,13 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
       </div>
 
       {/* 3. Interface Density & Corner Geometry */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.25rem',
-        }}
-      >
+      <div className="settings-two-col-grid">
         {/* Density */}
         <div>
-          <div
-            style={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-            }}
-          >
+          <div className="settings-group-label">
             UI Spacing & Density
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div className="settings-pill-row">
             {[
               { id: 'compact', label: 'Compact' },
               { id: 'comfortable', label: 'Balanced' },
@@ -343,19 +193,7 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                   key={d.id}
                   type="button"
                   onClick={() => onDensityChange(d.id as UiDensity)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.35rem',
-                    borderRadius: '6px',
-                    border: isSelected
-                      ? '1px solid var(--accent)'
-                      : '1px solid var(--border-light)',
-                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    cursor: 'pointer',
-                  }}
+                  className={`settings-pill-option ${isSelected ? 'active' : ''}`}
                 >
                   {d.label}
                 </button>
@@ -366,17 +204,10 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
 
         {/* Corner Geometry */}
         <div>
-          <div
-            style={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-            }}
-          >
+          <div className="settings-group-label">
             Corner Geometry
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div className="settings-pill-row">
             {[
               { id: 'sharp', label: 'Tactical (3px)' },
               { id: 'modern', label: 'Modern (14px)' },
@@ -388,19 +219,7 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                   key={r.id}
                   type="button"
                   onClick={() => onRadiusChange(r.id as CornerRadius)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.35rem',
-                    borderRadius: '6px',
-                    border: isSelected
-                      ? '1px solid var(--accent)'
-                      : '1px solid var(--border-light)',
-                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    cursor: 'pointer',
-                  }}
+                  className={`settings-pill-option ${isSelected ? 'active' : ''}`}
                 >
                   {r.label}
                 </button>
@@ -411,27 +230,13 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
       </div>
 
       {/* 4. Typography & Font Scale */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.25rem',
-        }}
-      >
+      <div className="settings-two-col-grid">
         {/* Font Family */}
         <div>
-          <div
-            style={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-            }}
-          >
+          <div className="settings-group-label">
             Typography Family
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div className="settings-pill-row">
             {[
               { id: 'sans', label: 'Inter Sans' },
               { id: 'mono', label: 'Milspec HUD' },
@@ -443,19 +248,7 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                   key={f.id}
                   type="button"
                   onClick={() => onFontChange(f.id as FontFamily)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.35rem',
-                    borderRadius: '6px',
-                    border: isSelected
-                      ? '1px solid var(--accent)'
-                      : '1px solid var(--border-light)',
-                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    cursor: 'pointer',
-                  }}
+                  className={`settings-pill-option ${isSelected ? 'active' : ''}`}
                 >
                   {f.label}
                 </button>
@@ -466,17 +259,10 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
 
         {/* Font Scale */}
         <div>
-          <div
-            style={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-            }}
-          >
+          <div className="settings-group-label">
             Font Scale
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div className="settings-pill-row">
             {[
               { id: 'compact', label: 'Compact 90%' },
               { id: 'standard', label: 'Standard 100%' },
@@ -488,19 +274,7 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
                   key={s.id}
                   type="button"
                   onClick={() => onFontScaleChange(s.id as FontScale)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.35rem',
-                    borderRadius: '6px',
-                    border: isSelected
-                      ? '1px solid var(--accent)'
-                      : '1px solid var(--border-light)',
-                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.2)',
-                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    cursor: 'pointer',
-                  }}
+                  className={`settings-pill-option ${isSelected ? 'active' : ''}`}
                 >
                   {s.label}
                 </button>
@@ -511,74 +285,41 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
       </div>
 
       {/* 5. Default Startup Route */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div
-          style={{
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            marginBottom: '0.4rem',
-          }}
-        >
+      <div className="settings-sub-group">
+        <div className="settings-group-label">
           Default Screen on Vault Unlock
         </div>
         <select
           value={theme.startupRoute}
           onChange={(e) => onStartupRouteChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.6rem 0.8rem',
-            borderRadius: '8px',
-            background: 'rgba(0, 0, 0, 0.35)',
-            border: '1px solid var(--border-light)',
-            color: 'var(--text-primary)',
-            fontSize: '0.85rem',
-            outline: 'none',
-          }}
+          className="settings-select-field"
         >
-          <option value="/">Dashboard (Overview & Quick Actions)</option>
-          <option value="/firearms">Firearms Collection</option>
+          <option value="/">Dashboard & Firearms Collection</option>
           <option value="/ammo">Ammunition Stockpile</option>
-          <option value="/reloading">Reloading Bench</option>
+          <option value="/components">Reloading Bench & Components</option>
           <option value="/accessories">Optics, Accessories & Gear</option>
-          <option value="/boundbook">ATF Bound Book (Compliance)</option>
+          <option value="/bound-book">ATF Bound Book (Compliance)</option>
           <option value="/maintenance">Maintenance & Service Logs</option>
           <option value="/storage">Storage & Safe Organizer</option>
+          <option value="/load-development">Load Development</option>
+          <option value="/ballistics">Ballistics Calculator</option>
+          <option value="/nfa-tracker">NFA / Tax Stamp Tracker</option>
         </select>
       </div>
 
       {/* 6. Discretion / Privacy Shield Mode */}
-      <div
-        style={{
-          background: theme.privacyMode ? 'rgba(59, 130, 246, 0.12)' : 'rgba(0, 0, 0, 0.2)',
-          border: theme.privacyMode ? '1px solid var(--accent)' : '1px solid var(--border-light)',
-          borderRadius: '10px',
-          padding: '0.85rem 1rem',
-          marginBottom: '1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="settings-privacy-card">
+        <div className="settings-privacy-left">
           {theme.privacyMode ? (
-            <EyeOff size={20} style={{ color: 'var(--accent)' }} />
+            <EyeOff size={20} className="settings-modal-icon" />
           ) : (
-            <Eye size={20} style={{ color: 'var(--text-secondary)' }} />
+            <Eye size={20} className="text-secondary" />
           )}
           <div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div className="settings-privacy-title">
               Discretion Shield (Privacy Mode)
             </div>
-            <div
-              style={{
-                fontSize: '0.78rem',
-                color: 'var(--text-secondary)',
-                marginTop: '0.15rem',
-              }}
-            >
+            <div className="settings-privacy-desc">
               Masks serial numbers (SN••••21), total purchase investments, and safe names for
               screen-shares or range demonstrations.
             </div>
@@ -586,13 +327,8 @@ export const AppearanceSettingsSection: React.FC<AppearanceSettingsSectionProps>
         </div>
         <button
           type="button"
-          className={theme.privacyMode ? 'btn-primary' : 'btn-secondary'}
+          className={`settings-privacy-btn ${theme.privacyMode ? 'btn-primary' : 'btn-secondary'}`}
           onClick={onPrivacyToggle}
-          style={{
-            padding: '0.45rem 0.9rem',
-            fontSize: '0.8rem',
-            whiteSpace: 'nowrap',
-          }}
         >
           {theme.privacyMode ? 'Shield Enabled' : 'Enable Shield'}
         </button>

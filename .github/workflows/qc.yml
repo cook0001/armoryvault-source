@@ -1,0 +1,63 @@
+name: Quality Control (QC)
+
+on:
+  push:
+    branches:
+      - beta
+      - 'beta/**'
+  pull_request:
+    branches:
+      - beta
+  workflow_dispatch: {}
+
+jobs:
+  frontend-qc:
+    name: Frontend TypeScript & Vite QC
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript Typecheck Verification
+        run: npm run typecheck
+
+      - name: Frontend Vitest Unit Tests
+        run: npm test
+
+      - name: Production Bundle & Build Verification
+        run: npm run build
+
+  rust-qc:
+    name: Rust Backend & SQLite Engine QC
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cargo Check
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Cargo Clippy Linter
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Rust Unit Tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --verbose

@@ -21,11 +21,51 @@ export interface Accessory {
   model: string;
 
   magnification?: string;
+  opticSubtype?: string;
+  objectiveLensMm?: number;
+  tubeDiameter?: string;
+  reticleFocalPlane?: 'FFP' | 'SFP' | 'N/A';
+  turretClickValue?: string;
+  mountingSystem?: string;
+  zeroDistanceYards?: number;
+
   ratedCalibers?: string;
+  threadPitch?: string;
+  caliberRating?: string;
+  decibelRating?: number;
+  isFullAutoRated?: boolean;
+  baffleMaterial?: string;
+
   lumens?: number;
+  lightType?: string;
+  candela?: number;
+  beamDistanceMeters?: number;
+  laserType?: 'None' | 'Red' | 'Green' | 'IR' | 'Dual (Visible+IR)';
+  batteryType?: string;
+  runTimeHours?: number;
+
   supportedModels?: string;
   caliber?: string;
   capacity?: number;
+  bodyMaterial?: string;
+  feedStyle?: string;
+  followerColor?: string;
+
+  holsterStyle?: string;
+  handedness?: 'Right' | 'Left' | 'Ambidextrous';
+  retentionLevel?: string;
+  isOpticCut?: boolean;
+  lightCompatible?: string;
+  beltAttachment?: string;
+
+  mountType?: string;
+  mountHeight?: string;
+  railInterface?: string;
+  ringDiameter?: string;
+
+  slingPoints?: '1-Point' | '2-Point' | '1-to-2 Point Convertible' | '3-Point';
+  isPadded?: boolean;
+  attachmentHardware?: string;
 
   // Stock, Chassis & T/C Furniture Fields
   stockType?: string;
@@ -146,6 +186,7 @@ export interface Ammo {
   target_stock_goal?: number;
   alert_percentage?: number;
   storageLocationId?: number;
+  boxPrice?: number;
 }
 
 export interface Firearm {
@@ -414,6 +455,19 @@ declare global {
         requiresRelogin?: boolean;
         error?: string;
         filePath?: string;
+        type?: string;
+        count?: number;
+        message?: string;
+      }>;
+      importDatabase?: () => Promise<{
+        success: boolean;
+        canceled?: boolean;
+        requiresRelogin?: boolean;
+        error?: string;
+        filePath?: string;
+        type?: string;
+        count?: number;
+        message?: string;
       }>;
       selectBackupFolder: () => Promise<string | null>;
       getConfig: (key: string) => Promise<any>;
@@ -539,6 +593,7 @@ declare global {
         firearmId: number,
         taskId: string,
         logData: {
+          type?: string;
           action_performed?: string;
           part_details?: string;
           cost?: number;
@@ -566,14 +621,29 @@ declare global {
       }>;
       getPairingToken?: () => Promise<string | null>;
       revokePairingToken?: () => Promise<boolean>;
+      // Paired Devices Management
+      getPairedDevices?: () => Promise<PairedDevice[]>;
+      removePairedDevice?: (id: string) => Promise<boolean>;
+      unpairAllDevices?: () => Promise<boolean>;
+      onDeviceUnpaired?: (callback: (data: any) => void) => () => void;
       onSyncReceived: (callback: () => void) => () => void;
       onDevicePaired?: (
-        callback: (data: { deviceName?: string; timestamp?: number }) => void
+        callback: (data: { deviceId?: string; deviceName?: string; deviceType?: string; ipAddress?: string; timestamp?: number; isNew?: boolean }) => void
       ) => () => void;
       onVaultLocked: (callback: () => void) => () => void;
       getSyncQueue: () => Promise<SyncItem[]>;
-      removeSyncItem: (id: number) => Promise<number>;
+      removeSyncItem: (id: number | string) => Promise<number>;
       clearSyncQueue: () => Promise<boolean>;
+      rejectSyncItem?: (params: {
+        syncId: string;
+        itemType?: string;
+        filename?: string;
+        itemIdentifier?: string;
+        payload?: string;
+        deleteFromMobile?: boolean;
+      }) => Promise<string | null>;
+      getRejectedSyncs?: () => Promise<any[]>;
+      confirmRejectedSyncs?: (ids: string[]) => Promise<number>;
 
       // New Feature API Methods
       getStorageLocations: () => Promise<StorageLocation[]>;
@@ -757,6 +827,16 @@ export interface InsuranceItem {
   photoPath?: string;
 }
 
+export interface PairedDevice {
+  id: string;
+  deviceName: string;
+  deviceType: string;
+  ipAddress?: string;
+  pairedAt: string;
+  lastActiveAt: string;
+  isActive: boolean;
+}
+
 export interface SyncItem {
   id?: number;
   type:
@@ -773,7 +853,8 @@ export interface SyncItem {
     | 'bill_of_sale_transfer'
     | 'chrono_string'
     | 'target_analysis'
-    | 'malfunction_report';
+    | 'malfunction_report'
+    | 'custom_payload';
   upcOrId?: string;
   action?: 'add' | 'remove';
   count?: number;
@@ -806,5 +887,10 @@ export interface SyncItem {
   chrono_data?: ChronoString;
   // Target analysis sync fields
   target_data?: TargetAnalysis;
+  // Custom encrypted payload file fields (*.av*)
+  custom_payload_filename?: string;
+  custom_payload_extension?: string;
+  custom_payload_envelope?: any;
+  custom_payload_data?: any;
   [key: string]: any;
 }

@@ -47,6 +47,151 @@ export const parseRawCsv = (csvText: string, customDelimiter?: string): ParsedCs
     cleanText = cleanText.slice(1);
   }
 
+  // Support direct ingestion of ArmoryVault Handload Cards (.avr, .json)
+  const trimmed = cleanText.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsedJson = JSON.parse(trimmed);
+      const items = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
+      if (items.length > 0 && typeof items[0] === 'object' && items[0] !== null) {
+        const headersSet = new Set<string>();
+        const normalizedItems = items.map((item: any) => {
+          const rowObj: Record<string, string> = {};
+          const caliber =
+            (typeof item.cartridge === 'object' ? item.cartridge?.name : item.cartridge) ||
+            item.cal ||
+            item.caliber ||
+            '';
+          const bullet =
+            (typeof item.projectile === 'object' ? item.projectile?.name : item.projectile) ||
+            item.bullet_type ||
+            item.bullet ||
+            '';
+          const grain =
+            (typeof item.projectile === 'object' ? item.projectile?.weight_grains : undefined) ||
+            item.grain_weight ||
+            item.grain ||
+            (item.bullet ? parseInt(String(item.bullet)) || '' : '');
+          const count =
+            item.metadata?.batch_size ||
+            item.quantity ||
+            item.round_count ||
+            item.count ||
+            50;
+          const manufacturer =
+            item.manufacturer ||
+            (item.format === 'loadbench_recipe' ? 'LoadBench' : 'Handload');
+          const powder =
+            (typeof item.propellant === 'object' ? item.propellant?.name : item.propellant) ||
+            item.powder_name ||
+            item.powder ||
+            '';
+          const powderCharge =
+            item.chargeGrains ||
+            item.charge_grains ||
+            (typeof item.propellant === 'object' ? item.propellant?.charge_grains : undefined) ||
+            item.powder_charge ||
+            item.powderCharge ||
+            '';
+          const primer =
+            (typeof item.primer === 'object' ? item.primer?.name : item.primer) || '';
+          const primerType =
+            item.primer_type ||
+            (primer && String(primer).toLowerCase().includes('magnum') ? 'magnum' : 'standard');
+          const brass =
+            item.brass ||
+            (typeof item.cartridge === 'object' && item.cartridge?.brass_manufacturer
+              ? `${item.cartridge.brass_manufacturer}${item.cartridge.brass_firings ? ` (${item.cartridge.brass_firings}x fired)` : ''}`
+              : '');
+          const oal =
+            item.coal ||
+            item.oal ||
+            (typeof item.cartridge === 'object' ? item.cartridge?.coal_in : '') ||
+            '';
+          const bulletMfg =
+            item.bullet_manufacturer ||
+            (typeof item.projectile === 'object' ? item.projectile?.manufacturer : '') ||
+            '';
+
+          const simFps =
+            item.simulated?.muzzle_velocity_fps ||
+            item.simulated?.muzzleVelocityFps ||
+            item.muzzle_velocity_fps ||
+            item.fps;
+          const simPsi =
+            item.simulated?.max_pressure_psi ||
+            item.simulated?.maxPressurePsi ||
+            item.peak_pressure_psi ||
+            item.psi;
+          const obtNode = item.simulated?.obt_node ? `Node: ${item.simulated.obt_node}` : '';
+          const simInfo = simFps ? `LoadBench Sim (${simFps} fps${simPsi ? `, ${simPsi} psi` : ''}${obtNode ? ` • ${obtNode}` : ''})` : '';
+
+          const lotNum = item.metadata?.lot_number || item.lot || item.lotNumber;
+          const lotInfo = lotNum ? `Lot #${lotNum}` : '';
+          const author = item.metadata?.author ? `Author: ${item.metadata.author}` : '';
+          const targetRifle = item.metadata?.target_firearm ? `Rifle: ${item.metadata.target_firearm}` : '';
+          const cbto = item.projectile?.cbto_in || item.cbto;
+          const cbtoInfo = cbto ? `CBTO ${cbto}"` : '';
+          const jump = item.projectile?.freebore_jump_in !== undefined ? item.projectile.freebore_jump_in : item.jump;
+          const jumpInfo = jump !== undefined ? `Jump ${jump}"` : '';
+          const chrono = item.chronograph?.measured_average_fps
+            ? `Chrono: ${item.chronograph.measured_average_fps} fps (SD ${item.chronograph.standard_deviation_fps || 0}, ES ${item.chronograph.extreme_spread_fps || 0})`
+            : '';
+          const costPerRound = item.economics?.cost_per_round_usd || item.cost_per_round;
+
+          const assembledNotes = [
+            lotInfo,
+            author,
+            targetRifle,
+            simInfo,
+            chrono,
+            cbtoInfo,
+            jumpInfo,
+            item.metadata?.notes || item.notes || '',
+          ]
+            .filter(Boolean)
+            .join(' • ');
+
+          rowObj['caliber'] = String(caliber);
+          rowObj['manufacturer'] = String(manufacturer);
+          rowObj['type'] = 'handload';
+          rowObj['quantity'] = String(count);
+          rowObj['grain_weight'] = String(grain);
+          rowObj['bullet_type'] = String(bullet);
+          if (bulletMfg) rowObj['bullet_manufacturer'] = String(bulletMfg);
+          if (powder) rowObj['powder'] = String(powder);
+          if (powderCharge) rowObj['powderCharge'] = String(powderCharge);
+          if (primer) rowObj['primer'] = String(primer);
+          if (primerType) rowObj['primer_type'] = String(primerType);
+          if (brass) rowObj['brass'] = String(brass);
+          if (oal) rowObj['oal'] = String(oal);
+          if (costPerRound) rowObj['cost_per_round'] = String(costPerRound);
+          if (assembledNotes) rowObj['notes'] = String(assembledNotes);
+
+          for (const [k, v] of Object.entries(item)) {
+            if (!(k in rowObj) && v !== null && v !== undefined && typeof v !== 'object') {
+              rowObj[k] = String(v);
+            }
+          }
+
+          Object.keys(rowObj).forEach((k) => headersSet.add(k));
+          return rowObj;
+        });
+
+        const headers = Array.from(headersSet);
+        const rows = normalizedItems.map((obj) => headers.map((h) => obj[h] || ''));
+        return {
+          delimiter: ',',
+          headers,
+          rows,
+          rawRows: normalizedItems,
+        };
+      }
+    } catch {
+      // Fall through to CSV tokenizer
+    }
+  }
+
   const delimiter = customDelimiter || detectDelimiter(cleanText);
   const rows: string[][] = [];
   let currentRow: string[] = [];
@@ -145,11 +290,49 @@ export const normalizeHeader = (header: string): string => {
  * Synonym dictionaries for intelligent auto-mapping.
  */
 const FIREARMS_SYNONYMS: Record<keyof Firearm | string, string[]> = {
-  make: ['make', 'manufacturer', 'mfg', 'brand', 'builder', 'maker'],
-  model: ['model', 'model name', 'firearm model', 'gun model', 'name', 'item'],
-  serial_number: ['serial number', 'serial', 'serial no', 'sn', 's n', 'serialno', 'serialnum'],
-  caliber: ['caliber', 'cal', 'gauge', 'chambering', 'bore'],
-  firearm_type: ['firearm type', 'type', 'category', 'classification', 'kind', 'gun type'],
+  make: [
+    'make',
+    'manufacturer',
+    'mfg',
+    'brand',
+    'builder',
+    'maker',
+    'manufacturer and/or importer',
+    'manufacturer/importer',
+    'importer',
+    'mfg/importer',
+    'gun manufacturer',
+  ],
+  model: ['model', 'model name', 'firearm model', 'gun model', 'name', 'item', 'firearm name', 'gun name', 'item name', 'firearm'],
+  serial_number: [
+    'serial number',
+    'serial',
+    'serial no',
+    'serial no.',
+    'serial #',
+    'sn',
+    's n',
+    'serialno',
+    'serialnum',
+    'serial_no',
+    'ser no',
+    'ser no.',
+    'ser#',
+  ],
+  caliber: [
+    'caliber',
+    'cal',
+    'gauge',
+    'chambering',
+    'bore',
+    'caliber / gauge',
+    'caliber/gauge',
+    'cal / gauge',
+    'cal/gauge',
+    'caliber or gauge',
+    'caliber/bore',
+  ],
+  firearm_type: ['firearm type', 'type', 'category', 'classification', 'kind', 'gun type', 'weapon type'],
   action_type: ['action type', 'action', 'mechanism', 'operating system'],
   barrel_length: ['barrel length', 'barrel', 'bbl', 'barrel len', 'length', 'barrel length in'],
   finish: ['finish', 'color', 'coating', 'metal finish'],
@@ -162,6 +345,8 @@ const FIREARMS_SYNONYMS: Record<keyof Firearm | string, string[]> = {
     'date purchased',
     'buy date',
     'date',
+    'date of acquisition',
+    'acquired on',
   ],
   purchase_price: [
     'purchase price',
@@ -173,6 +358,9 @@ const FIREARMS_SYNONYMS: Record<keyof Firearm | string, string[]> = {
     'price paid',
     'value',
     'book value',
+    'acquisition price',
+    'acquired cost',
+    'bought price',
   ],
   purchased_from: [
     'purchased from',
@@ -184,39 +372,86 @@ const FIREARMS_SYNONYMS: Record<keyof Firearm | string, string[]> = {
     'store',
     'vendor',
     'bought from',
+    'name and address of person from whom acquired',
+    'name and address of person from whom acquired or received',
+    'acquisition name',
+    'bought at',
+    'purchased at',
   ],
   notes: ['notes', 'description', 'comments', 'remarks', 'details'],
-  round_count: ['round count', 'rounds fired', 'rounds', 'shots fired', 'shot count'],
+  round_count: ['round count', 'rounds fired', 'rounds', 'shots fired', 'shot count', 'total rounds fired'],
   is_sold: ['is sold', 'sold', 'disposed', 'status'],
-  sold_date: ['sold date', 'disposition date', 'date sold', 'sale date'],
-  sold_price: ['sold price', 'sale price', 'disposition price', 'amount sold'],
-  sold_to_name: ['sold to', 'sold to name', 'disposition to', 'buyer', 'transferee'],
+  sold_date: ['sold date', 'disposition date', 'date sold', 'sale date', 'date of disposition'],
+  sold_price: ['sold price', 'sale price', 'disposition price', 'amount sold', 'disposition amount', 'transfer price'],
+  sold_to_name: [
+    'sold to',
+    'sold to name',
+    'disposition to',
+    'buyer',
+    'transferee',
+    'name and address of person to whom transferred',
+    'name and address of person to whom transferred or delivered',
+    'disposition name',
+    'transferred to',
+    'sold to person',
+  ],
   is_nfa: ['is nfa', 'nfa', 'tax stamp', 'class 3', 'nfa item'],
   nfa_type: ['nfa type', 'stamp type'],
 };
 
 const AMMO_SYNONYMS: Record<keyof Ammo | string, string[]> = {
-  caliber: ['caliber', 'cal', 'gauge', 'chambering'],
-  manufacturer: ['manufacturer', 'brand', 'make', 'mfg'],
+  caliber: [
+    'caliber',
+    'cal',
+    'gauge',
+    'chambering',
+    'cartridge',
+    'caliber / gauge',
+    'caliber/gauge',
+    'cal / gauge',
+    'cal/gauge',
+  ],
+  manufacturer: ['manufacturer', 'brand', 'make', 'mfg', 'brand name', 'ammo manufacturer'],
   name: ['name', 'product name', 'line', 'ammo name', 'description'],
-  bullet_type: ['bullet type', 'projectile', 'bullet', 'type'],
+  bullet_type: ['bullet type', 'projectile', 'bullet', 'bullet_name', 'bullet style', 'bullet design'],
+  bullet_manufacturer: ['bullet manufacturer', 'bullet maker', 'bullet brand', 'proj_mfg'],
   grain_weight: ['grain weight', 'grain', 'grains', 'bullet weight', 'weight', 'gr'],
   rounds_per_box: ['rounds per box', 'box count', 'box size', 'rpb'],
   boxes: ['boxes', 'box qty', 'number of boxes'],
-  quantity: ['quantity', 'rounds', 'count', 'qty', 'total rounds', 'round count', 'in stock'],
+  quantity: [
+    'quantity',
+    'rounds',
+    'count',
+    'qty',
+    'total rounds',
+    'round count',
+    'in stock',
+    'round_count',
+    'amount',
+    'current stock',
+    'inventory',
+    'in stock rounds',
+  ],
   cost_per_round: ['cost per round', 'cpr', 'price per round'],
   box_price: ['box price', 'cost', 'price', 'purchase price', 'amount'],
   location: ['location', 'storage', 'storage location', 'ammo can', 'can'],
   lot_number: ['lot number', 'lot', 'batch', 'batch number'],
+  powder: ['powder', 'propellant', 'gunpowder'],
+  powderCharge: ['powdercharge', 'powder charge', 'charge', 'charge grains', 'charge_grains'],
+  primer: ['primer', 'primer name', 'cap'],
+  primer_type: ['primer type', 'primer size', 'pocket size', 'pocket'],
+  brass: ['brass', 'case', 'cartridge case'],
+  oal: ['oal', 'coal', 'overall length', 'cartridge overall length'],
+  type: ['type', 'ammo type', 'load type'],
   notes: ['notes', 'description', 'comments'],
 };
 
 const RECHARGING_SYNONYMS: Record<keyof ReloadingComponent | string, string[]> = {
-  type: ['type', 'component type', 'category', 'kind'],
+  type: ['type', 'component type', 'category', 'kind', 'comp type'],
   manufacturer: ['manufacturer', 'brand', 'make', 'mfg'],
   model: ['model', 'name', 'description', 'component name'],
   caliber: ['caliber', 'size', 'size caliber'],
-  quantity: ['quantity', 'count', 'units', 'weight', 'qty', 'amount'],
+  quantity: ['quantity', 'count', 'units', 'weight', 'qty', 'amount', 'units in stock', 'inventory'],
   unit: ['unit', 'unit of measure', 'uom'],
   cost: ['cost', 'price', 'purchase price', 'value'],
   location: ['location', 'storage', 'shelf', 'bin'],
@@ -229,7 +464,7 @@ const ACCESSORY_SYNONYMS: Record<keyof Accessory | string, string[]> = {
   type: ['type', 'category', 'accessory type'],
   manufacturer: ['manufacturer', 'brand', 'make', 'mfg'],
   model: ['model', 'model name'],
-  serial_number: ['serial number', 'serial', 'sn', 's n'],
+  serial_number: ['serial number', 'serial', 'sn', 's n', 'serial #'],
   value: ['value', 'cost', 'price', 'purchase price'],
   location: ['location', 'storage', 'storage location'],
   condition: ['condition', 'state', 'grade'],
@@ -271,6 +506,17 @@ export const detectEntityType = (headers: string[]): CsvEntityType => {
       h.includes('suppressor')
     )
       accScore += 4;
+  }
+
+  // Detect fully assembled handload cartridges (has caliber, powder, and bullet/primer)
+  const hasCaliber = normalized.some((h) => h.includes('caliber') || h.includes('cal'));
+  const hasPowder = normalized.some((h) => h.includes('powder') || h.includes('propellant'));
+  const hasBulletOrPrimer = normalized.some(
+    (h) => h.includes('bullet') || h.includes('primer') || h.includes('projectile')
+  );
+  if (hasCaliber && hasPowder && hasBulletOrPrimer) {
+    ammoScore += 20;
+    compScore = Math.max(0, compScore - 15);
   }
 
   const scores = [
@@ -527,13 +773,20 @@ export const transformAmmoRows = (
     const ammo: Partial<Ammo> = {
       caliber: item.caliber || 'Unknown Caliber',
       manufacturer: item.manufacturer || 'Generic',
-      type: 'factory',
+      type: item.type === 'handload' || item.powder || item.powderCharge ? 'handload' : 'factory',
       count: qty,
       grain:
         item.grain_weight || item.grain
           ? parseInt(item.grain_weight || item.grain, 10) || 0
           : undefined,
       projectile: item.bullet_type || item.projectile || 'FMJ',
+      bullet_manufacturer: item.bullet_manufacturer || undefined,
+      powder: item.powder || undefined,
+      powderCharge: item.powderCharge ? parseFloat(item.powderCharge) || undefined : undefined,
+      primer: item.primer || undefined,
+      primer_type: item.primer_type || undefined,
+      brass: item.brass || undefined,
+      oal: item.oal ? parseFloat(item.oal) || undefined : undefined,
       costPerRound: cpr > 0 ? cpr : undefined,
       notes: item.notes || '',
     };

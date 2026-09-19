@@ -1,4 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { platform as getOsPlatform } from '@tauri-apps/plugin-os';
@@ -10,6 +11,7 @@ import type {
   Ammo,
   CustomSkuDatabase,
   Firearm,
+  PairedDevice,
   ReloadingComponent,
 } from '../types';
 
@@ -262,6 +264,31 @@ export async function setupDesktopBridge(): Promise<void> {
           return fallbackApi.deleteSku(skuId);
         }
       },
+      exportSkusCatalog: async () => {
+        try {
+          return await invoke<any>('export_skus_catalog');
+        } catch (err) {
+          console.error('[TauriBridge] export_skus_catalog error:', err);
+          return fallbackApi.exportSkusCatalog ? fallbackApi.exportSkusCatalog() : null;
+        }
+      },
+      importSkusCatalog: async (
+        catalogData: any,
+        mode: 'merge' | 'overwrite' = 'merge'
+      ): Promise<{ success: boolean; count: number }> => {
+        try {
+          const res = await invoke<any>('import_skus_catalog', {
+            catalogData,
+            mode: mode === 'overwrite' ? 'replace' : 'merge',
+          });
+          return { success: true, count: res?.importedCount || 0 };
+        } catch (err) {
+          console.error('[TauriBridge] import_skus_catalog error:', err);
+          return fallbackApi.importSkusCatalog
+            ? fallbackApi.importSkusCatalog(catalogData, mode)
+            : { success: false, count: 0 };
+        }
+      },
 
       // Storage Locations
       getStorageLocations: async () => {
@@ -307,22 +334,60 @@ export async function setupDesktopBridge(): Promise<void> {
           return [];
         }
       },
-      removeSyncItem: async (id: number) => {
+      removeSyncItem: async (id: number | string) => {
         try {
           await invoke('remove_sync_item', { id: String(id) });
-          return id;
+          window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
+          return typeof id === 'number' ? id : 1;
         } catch (err) {
           console.error('[TauriBridge] removeSyncItem error:', err);
-          return id;
+          return typeof id === 'number' ? id : 1;
         }
       },
       clearSyncQueue: async () => {
         try {
           await invoke('clear_sync_queue');
+          window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
           return true;
         } catch (err) {
           console.error('[TauriBridge] clearSyncQueue error:', err);
           return false;
+        }
+      },
+      rejectSyncItem: async (params: {
+        syncId: string;
+        itemType?: string;
+        filename?: string;
+        itemIdentifier?: string;
+        payload?: string;
+        deleteFromMobile?: boolean;
+      }) => {
+        try {
+          await invoke('reject_sync_item', {
+            id: String(params.syncId),
+            deleteFromMobile: params.deleteFromMobile ?? true,
+          });
+          window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
+          return params.syncId;
+        } catch (err) {
+          console.error('[TauriBridge] rejectSyncItem error:', err);
+          return null;
+        }
+      },
+      getRejectedSyncs: async () => {
+        try {
+          return await invoke<any[]>('get_rejected_syncs');
+        } catch (err) {
+          console.error('[TauriBridge] getRejectedSyncs error:', err);
+          return [];
+        }
+      },
+      confirmRejectedSyncs: async (ids: string[]) => {
+        try {
+          return await invoke<number>('confirm_rejected_syncs', { ids });
+        } catch (err) {
+          console.error('[TauriBridge] confirmRejectedSyncs error:', err);
+          return 0;
         }
       },
 
@@ -458,7 +523,7 @@ export async function setupDesktopBridge(): Promise<void> {
               : '';
           if (queryParam) {
             const res = await fetch(
-              `https://armstrader.store/api/ffls/search?${queryParam}&limit=${cleanLimit}`
+              `https://armstrader.store/api/ffl/search?${queryParam}&limit=${cleanLimit}`
             );
             if (res.ok) {
               const data = await res.json();
@@ -471,6 +536,14 @@ export async function setupDesktopBridge(): Promise<void> {
         return fallbackApi.lookupFFL
           ? fallbackApi.lookupFFL(params)
           : { success: false, data: [], message: 'No FFLs found' };
+      },
+      lookupUPC: async (upc: string) => {
+        try {
+          return await invoke<any>('lookup_upc', { upc });
+        } catch (err) {
+          console.error('[TauriBridge] lookup_upc error:', err);
+          return fallbackApi.lookupUPC ? fallbackApi.lookupUPC(upc) : null;
+        }
       },
 
       // Batch Imports
@@ -611,6 +684,14 @@ export async function setupDesktopBridge(): Promise<void> {
           return { success: false, error: err?.message || String(err) };
         }
       },
+      importDatabase: async () => {
+        try {
+          return await invoke<any>('import_database');
+        } catch (err: any) {
+          console.error('[TauriBridge] import_database error:', err);
+          return { success: false, error: err?.message || String(err) };
+        }
+      },
 
       // File Dialogs & System
       selectCSVFile: async () => {
@@ -740,10 +821,13 @@ export async function setupDesktopBridge(): Promise<void> {
       },
       addChronoString: async (item: any) => {
         try {
-          return await invoke<any>('add_chrono_string', { item });
+          return await invoke<any>('add_chrono_string', {
+            chronoString: item,
+            chrono_string: item,
+          });
         } catch (err) {
           console.error('[TauriBridge] add_chrono_string error:', err);
-          return item;
+          return fallbackApi.addChronoString ? fallbackApi.addChronoString(item) : item;
         }
       },
       deleteChronoString: async (id: number) => {
@@ -766,10 +850,13 @@ export async function setupDesktopBridge(): Promise<void> {
       },
       addTargetAnalysis: async (item: any) => {
         try {
-          return await invoke<any>('add_target_analysis', { item });
+          return await invoke<any>('add_target_analysis', {
+            targetAnalysis: item,
+            target_analysis: item,
+          });
         } catch (err) {
           console.error('[TauriBridge] add_target_analysis error:', err);
-          return item;
+          return fallbackApi.addTargetAnalysis ? fallbackApi.addTargetAnalysis(item) : item;
         }
       },
       deleteTargetAnalysis: async (id: number) => {
@@ -948,10 +1035,184 @@ export async function setupDesktopBridge(): Promise<void> {
         }
       },
       getAllLocalIps: async () => {
+        try {
+          const info = await invoke<any>('get_pairing_info');
+          if (info && Array.isArray(info.interfaces)) {
+            return info.interfaces;
+          }
+        } catch {}
         if (fallbackApi.getAllLocalIps) {
           return fallbackApi.getAllLocalIps();
         }
         return [{ name: 'Default', address: '127.0.0.1', score: 100, isVirtual: false }];
+      },
+      getPairingInfo: async () => {
+        try {
+          return await invoke<any>('get_pairing_info');
+        } catch (err) {
+          console.error('[TauriBridge] get_pairing_info error:', err);
+          return fallbackApi.getPairingInfo ? fallbackApi.getPairingInfo() : null;
+        }
+      },
+      getPairingToken: async () => {
+        try {
+          return await invoke<string>('get_pairing_token');
+        } catch {
+          return '';
+        }
+      },
+      revokePairingToken: async () => {
+        try {
+          return await invoke<boolean>('revoke_pairing_token');
+        } catch {
+          return false;
+        }
+      },
+
+      // Paired Devices Management
+      getPairedDevices: async () => {
+        try {
+          return await invoke<PairedDevice[]>('get_paired_devices');
+        } catch (err) {
+          console.error('[TauriBridge] get_paired_devices error:', err);
+          return fallbackApi.getPairedDevices ? fallbackApi.getPairedDevices() : [];
+        }
+      },
+      removePairedDevice: async (id: string) => {
+        try {
+          return await invoke<boolean>('remove_paired_device', { id });
+        } catch (err) {
+          console.error('[TauriBridge] remove_paired_device error:', err);
+          return false;
+        }
+      },
+      unpairAllDevices: async () => {
+        try {
+          return await invoke<boolean>('unpair_all_devices');
+        } catch (err) {
+          console.error('[TauriBridge] unpair_all_devices error:', err);
+          return false;
+        }
+      },
+
+      // Custom Maintenance Schedule Presets
+      getCustomSchedulePresets: async () => {
+        try {
+          return await invoke<any>('get_custom_schedule_presets');
+        } catch (err) {
+          console.error('[TauriBridge] get_custom_schedule_presets error:', err);
+          return fallbackApi.getCustomSchedulePresets
+            ? fallbackApi.getCustomSchedulePresets()
+            : [];
+        }
+      },
+      saveCustomSchedulePresets: async (presets: any) => {
+        try {
+          return await invoke<boolean>('save_custom_schedule_presets', { presets });
+        } catch (err) {
+          console.error('[TauriBridge] save_custom_schedule_presets error:', err);
+          return fallbackApi.saveCustomSchedulePresets
+            ? fallbackApi.saveCustomSchedulePresets(presets)
+            : false;
+        }
+      },
+
+      // QR Label Printing
+      printQRLabel: async (data: {
+        itemName: string;
+        itemDetails: string;
+        qrDataUrl: string;
+      }): Promise<boolean> => {
+        const printWindow = window.open('', '_blank', 'width=650,height=650');
+        if (printWindow) {
+          const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>QR Label - ${data.itemName}</title>
+  <style>
+    @page { size: auto; margin: 10mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #000; }
+    .label-card { border: 2px solid #000; border-radius: 8px; padding: 16px; max-width: 320px; }
+    .title { font-size: 16pt; font-weight: bold; margin-bottom: 8px; }
+    .details { font-size: 10pt; color: #444; margin-bottom: 12px; }
+    .qr-img { width: 180px; height: 180px; }
+  </style>
+</head>
+<body>
+  <div class="label-card">
+    <div class="title">${data.itemName}</div>
+    <div class="details">${data.itemDetails}</div>
+    <img class="qr-img" src="${data.qrDataUrl}" alt="QR Code" />
+  </div>
+</body>
+</html>`;
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 300);
+          return true;
+        }
+        return false;
+      },
+
+      // Real-time Event Subscriptions
+      onSyncReceived: (callback: () => void) => {
+        let unlistenSync: (() => void) | null = null;
+        let unlistenChanged: (() => void) | null = null;
+        listen('sync-received', () => {
+          callback();
+        }).then((fn) => {
+          unlistenSync = fn;
+        });
+        listen('sync-queue-changed', () => {
+          callback();
+        }).then((fn) => {
+          unlistenChanged = fn;
+        });
+        const handleWindowUpdate = () => callback();
+        window.addEventListener('armoryvault-sync-queue-updated', handleWindowUpdate);
+        return () => {
+          if (unlistenSync) unlistenSync();
+          if (unlistenChanged) unlistenChanged();
+          window.removeEventListener('armoryvault-sync-queue-updated', handleWindowUpdate);
+        };
+      },
+      onDevicePaired: (callback: (data: any) => void) => {
+        let unlisten: (() => void) | null = null;
+        listen('device-paired', (event: any) => {
+          callback(event.payload);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+        return () => {
+          if (unlisten) unlisten();
+        };
+      },
+      onDeviceUnpaired: (callback: (data: any) => void) => {
+        let unlisten: (() => void) | null = null;
+        listen('device-unpaired', (event: any) => {
+          callback(event.payload);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+        return () => {
+          if (unlisten) unlisten();
+        };
+      },
+      onVaultLocked: (callback: () => void) => {
+        let unlisten: (() => void) | null = null;
+        listen('vault-locked', () => {
+          callback();
+        }).then((fn) => {
+          unlisten = fn;
+        });
+        return () => {
+          if (unlisten) unlisten();
+        };
       },
     };
   }

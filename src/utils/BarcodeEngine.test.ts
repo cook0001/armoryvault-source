@@ -304,4 +304,75 @@ describe('BarcodeEngine', () => {
     const result = parseBarcodeData(mockUnknownItem, []);
     expect(result.category).toBe('unknown');
   });
+
+  it('should correctly ingest a LoadBench / ArmoryVault Handload QR JSON string', () => {
+    const qrPayload = JSON.stringify({
+      app: 'ArmoryVault',
+      source: 'LoadBench',
+      type: 'handload',
+      cal: '6.5 Creedmoor',
+      bullet: '140gr ELD Match',
+      grain: 140,
+      powder: 'Hodgdon Varget 41.5gr',
+      powder_name: 'Varget',
+      powder_charge: 41.5,
+      primer: 'CCI 450 Small Rifle Magnum',
+      fps: 2710,
+      psi: 57200,
+      lot: 'LB-829103',
+      count: 50,
+      coal: 2.8,
+      cbto: 2.195,
+      jump: 0.02,
+      notes: 'Match Target Load',
+    });
+
+    const result = parseBarcodeData(qrPayload, []);
+    expect(result.category).toBe('ammo');
+    expect(result.parsedAmmo?.type).toBe('handload');
+    expect(result.parsedAmmo?.caliber).toBe('6.5 Creedmoor');
+    expect(result.parsedAmmo?.grain).toBe(140);
+    expect(result.parsedAmmo?.projectile).toBe('140gr ELD Match');
+    expect(result.parsedAmmo?.powder).toBe('Varget');
+    expect(result.parsedAmmo?.powderCharge).toBe(41.5);
+    expect(result.parsedAmmo?.primer).toBe('CCI 450 Small Rifle Magnum');
+    expect(result.parsedAmmo?.count).toBe(50);
+    expect(result.parsedAmmo?.oal).toBe(2.8);
+    expect(result.parsedAmmo?.upc_code).toBe('LB-829103');
+    expect(result.parsedAmmo?.notes).toContain('Lot #LB-829103');
+    expect(result.parsedAmmo?.notes).toContain('2710 fps');
+    expect(result.parsedAmmo?.notes).toContain('57200 psi');
+    expect(result.parsedAmmo?.notes).toContain('CBTO: 2.195"');
+  });
+
+  it('should correctly ingest a LoadBench .load project object', () => {
+    const loadProject = {
+      app: 'LoadBench',
+      version: '1.0.0',
+      format: 'load_project',
+      cartridge: { name: '.308 Winchester', coal_in: 2.81 },
+      projectile: { name: '168gr Sierra MatchKing', weight_grains: 168 },
+      propellant: { name: 'IMR 4064' },
+      chargeGrains: 42.0,
+      primer: { name: 'Federal 210M Gold Medal' },
+      simulated: {
+        muzzleVelocityFps: 2650,
+        maxPressurePsi: 58000,
+      },
+      notes: 'Benchrest load',
+    };
+
+    const result = parseBarcodeData(loadProject, []);
+    expect(result.category).toBe('ammo');
+    expect(result.parsedAmmo?.type).toBe('handload');
+    expect(result.parsedAmmo?.caliber).toBe('.308 Winchester');
+    expect(result.parsedAmmo?.grain).toBe(168);
+    expect(result.parsedAmmo?.projectile).toBe('168gr Sierra MatchKing');
+    expect(result.parsedAmmo?.powder).toBe('IMR 4064');
+    expect(result.parsedAmmo?.powderCharge).toBe(42.0);
+    expect(result.parsedAmmo?.primer).toBe('Federal 210M Gold Medal');
+    expect(result.parsedAmmo?.oal).toBe(2.81);
+    expect(result.parsedAmmo?.notes).toContain('2650 fps');
+    expect(result.parsedAmmo?.notes).toContain('58000 psi');
+  });
 });

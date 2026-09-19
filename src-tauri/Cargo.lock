@@ -126,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "armoryvault_desktop_tauri"
-version = "2.11.0"
+version = "2.11.0-Tauri"
 dependencies = [
  "aes-gcm",
  "axum",

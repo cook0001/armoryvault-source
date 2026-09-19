@@ -1,4 +1,4 @@
-import { CheckCircle, RefreshCw, Server, Smartphone, Trash2 } from 'lucide-react';
+import { CheckCircle, Package, RefreshCw, Server, Smartphone, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -6,18 +6,26 @@ import {
   LanPairingModal,
   MaintenanceAlertBanner,
   PairSuccessToast,
+  PayloadIngestModal,
+  RejectSyncModal,
+  RejectSyncTarget,
   SyncInboxItemCard,
   UnknownRouteModal,
+  PairedDevicesTab,
 } from '../components/sync';
 import { useModules } from '../modules/registry/ModuleContext';
-import { Ammo, Firearm, ReloadingComponent, SyncItem } from '../types';
+import { Ammo, Firearm, PairedDevice, ReloadingComponent, SyncItem } from '../types';
 import { parseBarcodeData } from '../utils/BarcodeEngine';
 import { parseCurrency, parseCurrencyOrNull } from '../utils/currency';
 import { assignItemToStorage, saveStorageLocations } from '../utils/StorageSync';
 
 export const SyncInbox = () => {
-  const [activeTab, setActiveTab] = useState<'inbox' | 'pair'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'devices'>('inbox');
   const [queue, setQueue] = useState<SyncItem[]>([]);
+  const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
+  const [isRefreshingDevices, setIsRefreshingDevices] = useState(false);
+  const [serverPort, setServerPort] = useState(3456);
+  const [hostname, setHostname] = useState('');
   const [syncQrUrl, setSyncQrUrl] = useState('');
   const [localIp, setLocalIp] = useState('');
   const [networkInterfaces, setNetworkInterfaces] = useState<
@@ -52,6 +60,27 @@ export const SyncInbox = () => {
     taskName: string;
     projectedRounds: number;
   } | null>(null);
+
+  const [manualPayloadContent, setManualPayloadContent] = useState<string | null>(null);
+  const [manualPayloadFilename, setManualPayloadFilename] = useState<string | undefined>(undefined);
+  const [isManualPayloadModalOpen, setIsManualPayloadModalOpen] = useState(false);
+  const [pendingRejectTarget, setPendingRejectTarget] = useState<RejectSyncTarget | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setManualPayloadFilename(file.name);
+      setManualPayloadContent(text);
+      setIsManualPayloadModalOpen(true);
+    } catch (err) {
+      console.error('[SyncInbox] Failed to read selected file:', err);
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const getFirearmMaintenanceWarning = (firearm: Firearm, additionalRounds: number) => {
     const currentRounds = Number(firearm.round_count) || 0;
@@ -99,11 +128,24 @@ export const SyncInbox = () => {
 
   const isPairModalOpenRef = useRef(isPairModalOpen);
   isPairModalOpenRef.current = isPairModalOpen;
+  const lastPairToastRef = useRef<{ deviceName: string; time: number } | null>(null);
 
   const handlePairSuccess = (deviceName = 'Mobile Companion App') => {
     setIsPairModalOpen(false);
-    setActiveTab('inbox');
-    setPairSuccess({ deviceName, timestamp: Date.now() });
+
+    // Throttle toast display: prevent repeated toast popups for the same device within 15 seconds
+    const now = Date.now();
+    if (
+      lastPairToastRef.current &&
+      lastPairToastRef.current.deviceName === deviceName &&
+      now - lastPairToastRef.current.time < 15000
+    ) {
+      return;
+    }
+    lastPairToastRef.current = { deviceName, time: now };
+
+    // Retain user's currently selected tab (inbox or devices)
+    setPairSuccess({ deviceName, timestamp: now });
 
     if (pairTimerRef.current) {
       clearTimeout(pairTimerRef.current);
@@ -124,6 +166,7 @@ export const SyncInbox = () => {
 
     let unsubscribeSync: (() => void) | undefined;
     let unsubscribePair: (() => void) | undefined;
+    let unsubscribeUnpair: (() => void) | undefined;
 
     if (window.api && window.api.onSyncReceived) {
       unsubscribeSync = window.api.onSyncReceived(() => {
@@ -136,18 +179,65 @@ export const SyncInbox = () => {
 
     if (window.api && window.api.onDevicePaired) {
       unsubscribePair = window.api.onDevicePaired((data) => {
-        handlePairSuccess(data?.deviceName || 'Mobile Companion App');
+        fetchPairedDevices();
+
+        // Only show the popup toast if:
+        // 1. The user explicitly opened the QR Pairing modal (waiting for a scan), OR
+        // 2. This device is brand-new (data.isNew === true)
+        const isModalOpen = isPairModalOpenRef.current;
+        const isNewDevice = data?.isNew === true;
+        if (isModalOpen || isNewDevice) {
+          handlePairSuccess(data?.deviceName || 'Mobile Companion App');
+        }
+      });
+    }
+
+    if (window.api && window.api.onDeviceUnpaired) {
+      unsubscribeUnpair = window.api.onDeviceUnpaired(() => {
+        fetchPairedDevices();
       });
     }
 
     return () => {
       if (unsubscribeSync) unsubscribeSync();
       if (unsubscribePair) unsubscribePair();
+      if (unsubscribeUnpair) unsubscribeUnpair();
       if (pairTimerRef.current) clearTimeout(pairTimerRef.current);
     };
   }, [location.state]);
 
+  const fetchPairedDevices = async () => {
+    if (window.api && window.api.getPairedDevices) {
+      setIsRefreshingDevices(true);
+      try {
+        const devs = await window.api.getPairedDevices();
+        setPairedDevices(devs || []);
+      } catch (err) {
+        console.error('[SyncInbox] Failed to load paired devices:', err);
+      } finally {
+        setIsRefreshingDevices(false);
+      }
+    }
+  };
+
+  const handleUnpairDevice = async (id: string, name: string) => {
+    if (!window.api || !window.api.removePairedDevice) return;
+    if (window.confirm(`Are you sure you want to unpair "${name}"? This device will lose sync access until paired again.`)) {
+      await window.api.removePairedDevice(id);
+      await fetchPairedDevices();
+    }
+  };
+
+  const handleUnpairAll = async () => {
+    if (!window.api || !window.api.unpairAllDevices) return;
+    if (window.confirm('Are you sure you want to unpair ALL mobile devices? All paired companions will need to be re-paired.')) {
+      await window.api.unpairAllDevices();
+      await fetchPairedDevices();
+    }
+  };
+
   const loadData = async () => {
+    fetchPairedDevices();
     if (window.api) {
       const ammo = await window.api.getAmmo();
       setAmmoList(ammo);
@@ -210,6 +300,8 @@ export const SyncInbox = () => {
       if (window.api.getPairingInfo) {
         const info = await window.api.getPairingInfo();
         setNetworkInterfaces(info.interfaces || []);
+        if (info.port) setServerPort(info.port);
+        if (info.hostname) setHostname(info.hostname);
         if (overrideIp) {
           activeIp = overrideIp;
           const tokenParam = info.token ? `&token=${encodeURIComponent(info.token)}` : '';
@@ -324,6 +416,28 @@ export const SyncInbox = () => {
             });
             return;
           }
+        }
+      }
+
+      // 1b. Check if upcOrId is a LoadBench / ArmoryVault Handload QR or JSON payload
+      if (
+        upcOrId.trim().startsWith('{') ||
+        upcOrId.includes('"type":"handload"') ||
+        upcOrId.includes('LoadBench') ||
+        upcOrId.includes('load_project')
+      ) {
+        const parsedHandload = parseBarcodeData(upcOrId, ammoList);
+        if (parsedHandload.category === 'ammo' && parsedHandload.parsedAmmo) {
+          await window.api.removeSyncItem(item.id!);
+          navigate('/ammo', {
+            state: {
+              openAddModal: true,
+              upc: parsedHandload.parsedAmmo.upc_code || upcOrId,
+              parsedData: parsedHandload.parsedAmmo,
+              syncItemId: item.id,
+            },
+          });
+          return;
         }
       }
 
@@ -632,16 +746,31 @@ export const SyncInbox = () => {
             date: item.date || new Date(item.timestamp).toISOString().split('T')[0],
             optic_name: item.optic_name,
             notes: `Range Session (${rounds} rds)${item.location ? ` @ ${item.location}` : ''}`,
-            photo_path: item.target_photo_path || item.photo_path,
+            photo_path: item.target_photo_path || item.photo_path || item.photoBase64,
           });
         }
 
         // Also record chronograph shot string telemetry if bundled
         if (item.chrono_data && window.api.addChronoString) {
+          const avg = item.chrono_data.averageVelocity ?? item.chrono_data.avg;
+          const sd = item.chrono_data.standardDeviation ?? item.chrono_data.sd;
+          const es = item.chrono_data.extremeSpread ?? item.chrono_data.es;
+          const shots = item.chrono_data.shotVelocities ?? item.chrono_data.shots ?? [];
           await window.api.addChronoString({
             ...item.chrono_data,
             firearm_id: fId,
+            firearmId: fId,
             ammo_id: aId,
+            ammoId: aId,
+            ammoLabel: item.ammo_name,
+            averageVelocity: avg,
+            avg: avg,
+            standardDeviation: sd,
+            sd: sd,
+            extremeSpread: es,
+            es: es,
+            shotVelocities: shots,
+            shots: shots,
             date:
               item.chrono_data.date ||
               item.date ||
@@ -1320,15 +1449,30 @@ export const SyncInbox = () => {
               date: item.date || new Date(item.timestamp).toISOString().split('T')[0],
               optic_name: item.optic_name,
               notes: `Range Session (${rounds} rds)${item.location ? ` @ ${item.location}` : ''}`,
-              photo_path: item.target_photo_path || item.photo_path,
+              photo_path: item.target_photo_path || item.photo_path || item.photoBase64,
             });
           }
 
           if (item.chrono_data && window.api.addChronoString) {
+            const avg = item.chrono_data.averageVelocity ?? item.chrono_data.avg;
+            const sd = item.chrono_data.standardDeviation ?? item.chrono_data.sd;
+            const es = item.chrono_data.extremeSpread ?? item.chrono_data.es;
+            const shots = item.chrono_data.shotVelocities ?? item.chrono_data.shots ?? [];
             await window.api.addChronoString({
               ...item.chrono_data,
               firearm_id: fId,
+              firearmId: fId,
               ammo_id: aId,
+              ammoId: aId,
+              ammoLabel: item.ammo_name,
+              averageVelocity: avg,
+              avg: avg,
+              standardDeviation: sd,
+              sd: sd,
+              extremeSpread: es,
+              es: es,
+              shotVelocities: shots,
+              shots: shots,
               date:
                 item.chrono_data.date ||
                 item.date ||
@@ -1364,17 +1508,74 @@ export const SyncInbox = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.api) {
-      await window.api.removeSyncItem(id);
-      loadData();
+  const handleDelete = (id: number | string) => {
+    const item = queue.find((q) => String(q.id) === String(id));
+    if (!item) {
+      if (window.api) {
+        window.api.removeSyncItem(id as any).then(() => {
+          window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
+          loadData();
+        });
+      }
+      return;
     }
+
+    let itemType = 'Sync Item';
+    let filename: string | undefined;
+    let itemIdentifier: string | undefined;
+    let title: string | undefined;
+
+    if (item.custom_payload_filename) {
+      filename = item.custom_payload_filename;
+      itemType = item.custom_payload_extension?.toUpperCase() || 'Payload';
+      title = filename;
+    } else if (item.item_type) {
+      itemType = item.item_type;
+      itemIdentifier =
+        (item as any).serial_number ||
+        (item as any).upc ||
+        (item as any).lot_number ||
+        (item as any).name;
+      title = `${item.item_type}: ${itemIdentifier || '#' + item.id}`;
+    } else if (item.action) {
+      itemType = item.action;
+      title = `${item.action} entry`;
+    }
+
+    setPendingRejectTarget({
+      id: item.id ?? id,
+      itemType,
+      filename,
+      itemIdentifier,
+      title,
+      payload: item,
+    });
+  };
+
+  const handleConfirmReject = async (target: RejectSyncTarget, deleteFromMobile: boolean) => {
+    if (!window.api) return;
+
+    if (deleteFromMobile && window.api.rejectSyncItem) {
+      await window.api.rejectSyncItem({
+        syncId: String(target.id),
+        itemType: target.itemType,
+        filename: target.filename,
+        itemIdentifier: target.itemIdentifier,
+        payload: typeof target.payload === 'object' ? JSON.stringify(target.payload) : target.payload,
+        deleteFromMobile: true,
+      });
+    }
+
+    await window.api.removeSyncItem(target.id as any);
+    window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
+    loadData();
   };
 
   const handleClearAll = async () => {
-    if (confirm('Are you sure you want to delete all pending sync items?')) {
+    if (window.confirm('Are you sure you want to delete all pending sync items?')) {
       if (window.api) {
         await window.api.clearSyncQueue();
+        window.dispatchEvent(new CustomEvent('armoryvault-sync-queue-updated'));
         loadData();
       }
     }
@@ -1425,65 +1626,97 @@ export const SyncInbox = () => {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
       <div
         style={{
           display: 'flex',
-          gap: '1rem',
-          marginBottom: '2rem',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           borderBottom: '1px solid var(--border-light)',
-          paddingBottom: '1rem',
+          paddingBottom: '0.75rem',
+          marginBottom: '1.5rem',
         }}
       >
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => setActiveTab('inbox')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: activeTab === 'inbox' ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              padding: '0.5rem 1rem',
+              borderBottom: activeTab === 'inbox' ? '2px solid var(--accent)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontWeight: activeTab === 'inbox' ? 600 : 400,
+            }}
+          >
+            <Server size={20} /> Sync Inbox
+            {queue.length > 0 && (
+              <span
+                style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  padding: '0.1rem 0.5rem',
+                  borderRadius: '12px',
+                }}
+              >
+                {queue.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('devices');
+              fetchPairedDevices();
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: activeTab === 'devices' ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              padding: '0.5rem 1rem',
+              borderBottom: activeTab === 'devices' ? '2px solid var(--accent)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontWeight: activeTab === 'devices' ? 600 : 400,
+            }}
+          >
+            <Smartphone size={20} /> Paired Devices
+            {pairedDevices.length > 0 && (
+              <span
+                style={{
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  color: 'var(--accent)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  padding: '0.1rem 0.5rem',
+                  borderRadius: '12px',
+                }}
+              >
+                {pairedDevices.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         <button
-          onClick={() => setActiveTab('inbox')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: activeTab === 'inbox' ? 'var(--accent)' : 'var(--text-secondary)',
-            fontSize: '1.1rem',
-            cursor: 'pointer',
-            padding: '0.5rem 1rem',
-            borderBottom: activeTab === 'inbox' ? '2px solid var(--accent)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          <Server size={20} /> Sync Inbox
-          {queue.length > 0 && (
-            <span
-              style={{
-                background: '#ef4444',
-                color: '#fff',
-                fontSize: '0.75rem',
-                fontWeight: 'bold',
-                padding: '0.1rem 0.5rem',
-                borderRadius: '12px',
-              }}
-            >
-              {queue.length}
-            </span>
-          )}
-        </button>
-        <button
+          className="btn-secondary"
           onClick={() => {
             generateQr();
             setIsPairModalOpen(true);
           }}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: isPairModalOpen ? 'var(--accent)' : 'var(--text-secondary)',
-            fontSize: '1.1rem',
-            cursor: 'pointer',
-            padding: '0.5rem 1rem',
-            borderBottom: isPairModalOpen ? '2px solid var(--accent)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}
         >
-          <Smartphone size={20} /> Pair Device
+          <Smartphone size={16} /> Pair Device (QR)
         </button>
       </div>
 
@@ -1523,7 +1756,7 @@ export const SyncInbox = () => {
               <RefreshCw size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
               <h2>No pending items</h2>
               <p>Scan items on your mobile app and tap "Sync" to send them here.</p>
-              <div style={{ marginTop: '1.5rem' }}>
+              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
                 <button
                   className="btn-primary"
                   onClick={() => {
@@ -1533,6 +1766,13 @@ export const SyncInbox = () => {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   <Smartphone size={18} /> Pair Mobile Device
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Package size={18} /> Import Payload (.av*)
                 </button>
               </div>
             </div>
@@ -1546,6 +1786,13 @@ export const SyncInbox = () => {
                   gap: '0.5rem',
                 }}
               >
+                <button
+                  className="btn-secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Package size={16} /> Import Payload (.av*)
+                </button>
                 <button className="btn-primary" onClick={handleApproveAll}>
                   <CheckCircle size={16} /> Approve All Valid
                 </button>
@@ -1583,6 +1830,23 @@ export const SyncInbox = () => {
         </div>
       )}
 
+      {activeTab === 'devices' && (
+        <PairedDevicesTab
+          devices={pairedDevices}
+          serverIp={localIp}
+          serverPort={serverPort}
+          hostname={hostname}
+          isRefreshing={isRefreshingDevices}
+          onRefreshDevices={fetchPairedDevices}
+          onOpenPairModal={() => {
+            generateQr();
+            setIsPairModalOpen(true);
+          }}
+          onUnpairDevice={handleUnpairDevice}
+          onUnpairAll={handleUnpairAll}
+        />
+      )}
+
       {/* Box Size Configuration Modal */}
       <BoxSizePromptModal
         pendingPrompt={pendingBoxSizePrompt}
@@ -1602,6 +1866,34 @@ export const SyncInbox = () => {
             state: { openAddModal: true, upc },
           });
         }}
+      />
+
+      {/* Hidden File Picker for Custom ArmoryVault Payloads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".avfirearm,.avsession,.avammo,.avcomponent,.avaccessory,.avmaintenance,.avtransfer,.avbundle,.json"
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
+
+      {/* Manual Payload Ingest Modal */}
+      <PayloadIngestModal
+        isOpen={isManualPayloadModalOpen}
+        rawPayload={manualPayloadContent}
+        filename={manualPayloadFilename}
+        onClose={() => setIsManualPayloadModalOpen(false)}
+        onApproved={() => {
+          loadData();
+        }}
+      />
+
+      {/* Cross-Device Rejection & Mobile Pruning Modal */}
+      <RejectSyncModal
+        isOpen={Boolean(pendingRejectTarget)}
+        target={pendingRejectTarget}
+        onClose={() => setPendingRejectTarget(null)}
+        onConfirm={handleConfirmReject}
       />
     </div>
   );

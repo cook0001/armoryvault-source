@@ -5,23 +5,25 @@ This document defines the interoperability specifications, local Wi-Fi synchroni
 ---
 
 ## 📋 Table of Contents
+
 1. [Architecture Overview](#-architecture-overview)
-2. [Release Channel Strategy](#-release-channel-strategy)
+2. [Unified Release Strategy](#-unified-release-strategy)
 3. [Master Version Compatibility Matrix](#-master-version-compatibility-matrix)
 4. [Local Wi-Fi API Endpoint Contract](#-local-wi-fi-api-endpoint-contract)
 5. [Forward & Backward Compatibility Rules](#-forward--backward-compatibility-rules)
-6. [Android Native VersionCode & Rollback Protocol](#-android-native-versioncode--rollback-protocol)
-7. [Recommended Deployment Configurations](#-recommended-deployment-configurations)
+6. [Android Native VersionCode Protocol](#-android-native-versioncode-protocol)
+7. [Recommended Deployment Configuration](#-recommended-deployment-configuration)
 
 ---
 
 ## 🏛️ Architecture Overview
 
 The ArmoryVault platform operates on a **Local-First, Zero-Cloud P2P Model**:
+
 - **Desktop Application (Vault Host)**: Acts as the primary encrypted source of truth. When running on your local network (LAN), it hosts an embedded, encrypted HTTP server (default port `3456`) that handles pairing, inventory caching, and batch synchronization.
 - **Mobile Companion (Mobile Client)**: Operates independently as an offline-first client. When connected to the same local Wi-Fi network as the desktop app, it pairs via QR code and syncs records bidirectionally.
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │               ARMORYVAULT DESKTOP (HOST)               │
 │  • Encrypted SQLite Database (.enc)                    │
@@ -78,7 +80,7 @@ The Desktop application exposes the following REST endpoints on local port `3456
 | `/api/chrono` | `POST` | `v2.8.0-nightly.5` | Precision muzzle velocity string recording | `ChronoString` (Avg, SD, ES, shot list) |
 | `/api/target-analysis` | `POST` | `v2.8.0-nightly.5` | Shot grouping & MOA target analysis | `TargetAnalysis` (MOA, spread, photos) |
 | `/api/storage-locations` | `GET` | `v2.8.0-nightly.5` | Safes, cabinets, and ammo can location mapping | Location array |
-| `/api/ballistic-profiles`| `GET` | `v2.8.0-nightly.5` | G1/G7 ballistic trajectories and DOPE cards | Profiles array |
+| `/api/ballistic-profiles` | `GET` | `v2.8.0-nightly.5` | G1/G7 ballistic trajectories and DOPE cards | Profiles array |
 
 ---
 
@@ -96,9 +98,11 @@ The Desktop application exposes the following REST endpoints on local port `3456
 ## 🤖 Android Native VersionCode Protocol
 
 ### Android Operating System Invariant
+
 Android's system `PackageManager` strictly prohibits **in-place version downgrades**. If an APK has a lower or equal `versionCode` than the currently installed build on the device, Android aborts installation with `INSTALL_FAILED_VERSION_DOWNGRADE` ("App not installed").
 
 ### VersionCode Standard
+
 - **Production Baseline**: All Android builds maintain a strictly monotonic `versionCode >= 309`.
 - **Monotonic Progression**: Every unified release increments `versionCode` (e.g., `309`, `310`, `311`...).
 - **Backward Compatibility**: Setting `versionCode 309` on `v2.7.0` enables all existing users who ran either Stable (`versionCode 300`) or Nightly (`versionCode 308`) to upgrade directly in-place without uninstalling.
@@ -108,6 +112,6 @@ Android's system `PackageManager` strictly prohibits **in-place version downgrad
 
 ## 🎯 Recommended Deployment Configuration
 
-* **Desktop**: `v2.9.0` (Unified Production Release)
-* **Mobile**: `v2.7.10` (Unified Production Release, `versionCode 319`)
-* **Capabilities**: Full offline inventory sync, real-time ballistic profiles, chronograph velocity strings, shot grouping calculator, mobile firearm intake & photo uploads, secure LAN pairing token exchange, remote vault lock, automated Bill of Sale archival & sync, desktop-grade shotgun shell classification, specification badges, inspecting modal, and overpressure (+P / +P+) pressure rating sync.
+- **Desktop**: `v2.9.0` (Unified Production Release)
+- **Mobile**: `v2.7.10` (Unified Production Release, `versionCode 319`)
+- **Capabilities**: Full offline inventory sync, real-time ballistic profiles, chronograph velocity strings, shot grouping calculator, mobile firearm intake & photo uploads, secure LAN pairing token exchange, remote vault lock, automated Bill of Sale archival & sync, desktop-grade shotgun shell classification, specification badges, inspecting modal, and overpressure (+P / +P+) pressure rating sync.

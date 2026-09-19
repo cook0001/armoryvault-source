@@ -43,3 +43,36 @@
 - **Modal & Dialog Extraction**: NEVER embed complex modal dialogs, forms, or `createPortal` trees directly inside parent page components. All modals must reside in dedicated files under `src/components/modals/` or domain subfolders (e.g. `src/components/firearm-details/modals/`).
 - **Sectional Deck Partitioning**: Break complex pages into domain sections and card decks (e.g., Specs, Photo Gallery, Mounted Accessories, History).
 - **Backend Service & IPC Isolation**: In `electron/`, never stuff dozens of IPC handlers or Express routes directly into `main.js`. Separate database IPC, system IPC, and LAN sync routes into dedicated modules under `electron/ipc/` and `electron/server/`.
+
+## 10. CSS Vendor Prefixing & Cross-Browser Styling Protocol (Strict)
+- **Mandatory `-webkit-` Preceding Declaration**: Any CSS property requiring WebKit/Safari engine support—specifically `backdrop-filter`, `user-select`, `mask-image`, and `background-clip: text`—MUST ALWAYS include its `-webkit-` vendor prefix declared immediately BEFORE the standard unprefixed property:
+  ```css
+  /* Correct */
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+
+  -webkit-user-select: none;
+  user-select: none;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  ```
+- **Strict Prefix Ordering**: NEVER declare the standard CSS property before the vendor-prefixed property. Vendor prefixes must always precede standard properties to adhere to standard CSS cascade rules and pass style linter diagnostics.
+- **Scrollbar Suppression Standard**: When suppressing scrollbars, always implement the standard three-part cross-browser pattern:
+  ```css
+  /* Cross-browser scrollbar hiding */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  ```
+  paired with the WebKit pseudo-element:
+  ```css
+  .element::-webkit-scrollbar {
+    display: none;
+  }
+  ```
+- **Linter & Environment Directives**: When using desktop-specific directives (such as `-webkit-app-region: drag` or `no-drag`), ensure project lint configurations (`.hintrc`, `.vscode/settings.json`, Biome configs) properly ignore or declare these properties to prevent false-positive linter diagnostics.
+
+## 11. Zero Inline Styles & CSS Hygiene (Strict)
+- **Zero Raw Inline Styles in HTML**: NEVER use raw inline `style="..."` attributes in HTML files, web landing pages, documentation portals, or module templates (`website/index.html`, `armstrader.store`, etc.). All layout, color, typography, and spacing styles MUST reside in external stylesheets or reusable CSS utility classes.
+- **No `!important` Overuse**: Avoid `!important` flags in CSS stylesheets to preserve cascade predictability and comply with Biome's `noImportantStyles` linter rules. Rely on structural hierarchy and class specificity.
+

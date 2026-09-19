@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Crosshair, Gauge, Target, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Gauge, Target, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Firearm, OpticZeroRecord } from '@/types';
@@ -118,7 +118,7 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Failed to save optic torque/zero record:', err);
-      setError(err?.message || 'Failed to save optic zero and torque record.');
+      setError(err?.message || 'Failed to save optic record.');
     } finally {
       setIsSubmitting(false);
     }
@@ -127,144 +127,58 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
-        style={{ maxWidth: '640px', width: '100%' }}
+        className="modal-container"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="modal-header"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid var(--border-light)',
-            paddingBottom: '0.75rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#10b981',
-              }}
-            >
-              <Crosshair size={20} />
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                {existingRecord
-                  ? 'Edit Optic Zero & Torque Spec'
-                  : 'Record Optic Zero & Torque Spec'}
-              </h2>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '0.8rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {firearm.make} {firearm.model} ({firearm.caliber})
-              </p>
+        <div className="modal-header">
+          <div className="modal-header-title">
+            <Target size={22} className="text-accent" />
+            <div className="modal-header-text">
+              <h2>{existingRecord ? 'Edit Zero & Torque Profile' : 'Log Optic Zero & Fastener Torque'}</h2>
+              <p>{firearm.make} {firearm.model} ({firearm.caliber})</p>
             </div>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">
-            <X size={20} />
+          <button type="button" className="btn-icon" onClick={onClose} title="Close dialog">
+            <X size={18} />
           </button>
         </div>
 
         {error && (
-          <div
-            style={{
-              padding: '0.75rem',
-              marginBottom: '1rem',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.85rem',
-            }}
-          >
+          <div className="notification-banner notification-banner-danger mx-6 mt-4">
             <AlertTriangle size={16} />
             <span>{error}</span>
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-        >
-          {/* Optic Name */}
-          <div>
-            <label
-              htmlFor="optic-zero-name"
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-              }}
-            >
-              Mounted Optic / Sight Name *
-            </label>
-            <input
-              id="optic-zero-name"
-              type="text"
-              className="form-input"
-              placeholder="e.g. Vortex Razor HD Gen III 1-10x24 / Aimpoint T2"
-              value={opticName}
-              onChange={(e) => setOpticName(e.target.value)}
-              required
-            />
+        <form onSubmit={handleSubmit} className="modal-body">
+          {/* Optic Name Card */}
+          <div className="form-section-card">
+            <div className="form-group">
+              <label htmlFor="optic-zero-name">Mounted Optic / Sight Name *</label>
+              <input
+                id="optic-zero-name"
+                type="text"
+                className="form-input"
+                placeholder="e.g. Vortex Razor HD Gen III 1-10x24 / Aimpoint T2"
+                value={opticName}
+                onChange={(e) => setOpticName(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          {/* Torque Specifications Section */}
-          <div
-            style={{
-              padding: '0.85rem',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid var(--border-light)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                marginBottom: '0.75rem',
-                color: '#38bdf8',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-              }}
-            >
-              <Gauge size={16} />
-              <span>Fastener Torque Specifications (inch-pounds)</span>
+          {/* Torque Specifications Card */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Gauge size={16} className="text-accent" />
+                <h4 className="form-section-title">Fastener Torque Specifications (inch-pounds)</h4>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-              <div>
-                <label
-                  htmlFor="optic-ring-torque"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Ring Caps (in-lbs)
-                </label>
+            <div className="form-grid-3col">
+              <div className="form-group">
+                <label htmlFor="optic-ring-torque">Ring Caps (in-lbs)</label>
                 <input
                   id="optic-ring-torque"
                   type="number"
@@ -278,18 +192,8 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="optic-base-torque"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Base Clamp (in-lbs)
-                </label>
+              <div className="form-group">
+                <label htmlFor="optic-base-torque">Base Clamp (in-lbs)</label>
                 <input
                   id="optic-base-torque"
                   type="number"
@@ -303,18 +207,8 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="action-screw-torque"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Action Screws (in-lbs)
-                </label>
+              <div className="form-group">
+                <label htmlFor="action-screw-torque">Action Screws (in-lbs)</label>
                 <input
                   id="action-screw-torque"
                   type="number"
@@ -330,43 +224,18 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
             </div>
           </div>
 
-          {/* Zero Confirmation Section */}
-          <div
-            style={{
-              padding: '0.85rem',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid var(--border-light)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                marginBottom: '0.75rem',
-                color: '#34d399',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-              }}
-            >
-              <Target size={16} />
-              <span>Zero Verification & Ammunition Data</span>
+          {/* Zero Verification Card */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Target size={16} className="text-accent" />
+                <h4 className="form-section-title">Zero Verification &amp; Ammunition Data</h4>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr', gap: '0.75rem' }}>
-              <div>
-                <label
-                  htmlFor="zero-distance"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Distance (Yards)
-                </label>
+            <div className="form-grid-3col">
+              <div className="form-group">
+                <label htmlFor="zero-distance">Zero Distance (Yards)</label>
                 <input
                   id="zero-distance"
                   type="number"
@@ -379,18 +248,8 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="zero-ammo"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Zeroed Ammunition Load
-                </label>
+              <div className="form-group">
+                <label htmlFor="zero-ammo">Ammunition Load / Batch</label>
                 <input
                   id="zero-ammo"
                   type="text"
@@ -401,18 +260,8 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="zero-date"
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Confirmation Date
-                </label>
+              <div className="form-group">
+                <label htmlFor="zero-date">Confirmation Date</label>
                 <input
                   id="zero-date"
                   type="date"
@@ -422,43 +271,22 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
                 />
               </div>
             </div>
+
+            <div className="form-group">
+              <label htmlFor="optic-zero-notes">Turret Offsets / Reticle &amp; Environmental Notes</label>
+              <textarea
+                id="optic-zero-notes"
+                className="form-input"
+                rows={2}
+                placeholder="e.g. Turrets zero-stopped. 100yd zero confirmed at 65°F. Paint-penned witness marks on ring screws."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label
-              htmlFor="optic-zero-notes"
-              style={{
-                display: 'block',
-                marginBottom: '0.3rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              Turret Offsets / Reticle & Environmental Notes
-            </label>
-            <textarea
-              id="optic-zero-notes"
-              className="form-input"
-              rows={2}
-              placeholder="e.g. Turrets zero-stopped. 100yd zero confirmed at 65°F. Paint-penned witness marks on ring screws."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          {/* Actions */}
-          <div
-            className="modal-actions"
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              marginTop: '0.5rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--border-light)',
-            }}
-          >
+          {/* Modal Footer */}
+          <div className="modal-footer">
             <button
               type="button"
               className="btn-secondary"
@@ -471,7 +299,6 @@ export const OpticZeroModal: React.FC<OpticZeroModalProps> = ({
               type="submit"
               className="btn-primary"
               disabled={isSubmitting}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
               <CheckCircle size={16} />
               {isSubmitting

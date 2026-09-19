@@ -10,6 +10,10 @@ if (typeof HTMLDialogElement !== 'undefined') {
   };
 }
 
+if (typeof window !== 'undefined') {
+  window.confirm = () => true;
+}
+
 beforeAll(() => {
   mockWindowApi();
 });

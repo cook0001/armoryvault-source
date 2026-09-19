@@ -29,7 +29,7 @@ impl LocalFileProtocol {
     pub fn resolve_file_path(uri: &tauri::http::Uri) -> (PathBuf, bool) {
         let uri_str = uri.to_string();
         let is_thumb = uri_str.contains("thumb=1")
-            || uri.query().map_or(false, |q| q.contains("thumb=1"));
+            || uri.query().is_some_and(|q| q.contains("thumb=1"));
 
         // Strip query string
         let path_part = uri_str.split('?').next().unwrap_or(&uri_str);

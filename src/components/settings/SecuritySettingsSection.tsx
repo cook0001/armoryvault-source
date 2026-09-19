@@ -11,72 +11,30 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
   onOpenRecoveryKey,
 }) => {
   return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border-light)',
-        borderRadius: '12px',
-        padding: '1.25rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <Shield size={18} style={{ color: 'var(--accent)' }} />
-        <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 600 }}>
-          Vault Security & Encryption
-        </h3>
+    <div className="settings-section-card">
+      <div className="settings-section-header">
+        <Shield size={18} className="settings-section-icon" />
+        <h3 className="settings-section-title">Vault Security & Encryption</h3>
       </div>
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: '0.85rem',
-          margin: '0 0 1rem',
-        }}
-      >
-        Update your master password or view and copy your 64-character offline emergency recovery
-        key.
+      <p className="settings-section-desc">
+        Update your master password or view and copy your 64-character offline emergency recovery key.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="settings-action-grid">
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-btn-inner"
           onClick={onOpenChangePassword}
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            alignItems: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-          }}
         >
-          <Key size={16} /> Change Master Password
+          <Key size={16} />
+          <span>Change Master Password</span>
         </button>
         <button
-          className="btn-secondary"
+          type="button"
+          className="btn-secondary settings-btn-inner settings-btn-blue"
           onClick={onOpenRecoveryKey}
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            alignItems: 'center',
-            padding: '0.65rem 1rem',
-            fontSize: '0.85rem',
-            color: '#60a5fa',
-          }}
         >
-          <Lock size={16} /> View Vault Recovery Key
+          <Lock size={16} />
+          <span>View Vault Recovery Key</span>
         </button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import {
   FileText,
   MapPin,
   Target,
+  X,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -79,7 +80,6 @@ export const RangeSessionModal: React.FC<RangeSessionModalProps> = ({
 
   const currentFirearm = firearms.find((f) => f.id === Number(selectedFirearmId));
 
-  // Filter ammo by caliber matching current firearm unless user toggles showAllAmmo
   const filteredAmmo = ammoList.filter((a) => {
     if (showAllAmmo || !currentFirearm) return true;
     const firearmCal = (currentFirearm.caliber || '').toLowerCase().trim();
@@ -88,6 +88,11 @@ export const RangeSessionModal: React.FC<RangeSessionModalProps> = ({
   });
 
   const selectedAmmo = ammoList.find((a) => a.id === Number(selectedAmmoId));
+
+  const addQuickRounds = (amount: number) => {
+    const current = typeof roundsFired === 'number' ? roundsFired : 0;
+    setRoundsFired(current + amount);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,377 +124,233 @@ export const RangeSessionModal: React.FC<RangeSessionModalProps> = ({
           ammo_id: selectedAmmoId ? Number(selectedAmmoId) : undefined,
           rounds_fired: rounds,
           date,
-          location,
-          cost: cost ? parseFloat(cost) : 0,
-          notes,
+          location: location.trim() || undefined,
+          notes: notes.trim() || undefined,
+          cost: cost ? parseFloat(cost) : undefined,
         });
 
-        if (res.success) {
-          if (onSaved) onSaved();
-          onClose();
-        } else {
-          setError(res.error || 'Failed to log range session.');
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to log range trip');
         }
       }
+
+      window.dispatchEvent(new CustomEvent('armoryvault-reload'));
+      if (onSaved) onSaved();
+      onClose();
     } catch (err: any) {
-      console.error('Error logging range session:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      console.error('Failed to log range session:', err);
+      setError(err?.message || 'Failed to record range session.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const addQuickRounds = (amount: number) => {
-    const current = Number(roundsFired) || 0;
-    setRoundsFired(current + amount);
-  };
-
-  if (!isOpen) return null;
-
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.5rem',
-            borderBottom: '1px solid var(--border-light)',
-            paddingBottom: '1rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Target size={24} style={{ color: 'var(--accent)' }} />
-            <div>
-              <h2 style={{ margin: 0, padding: 0, border: 'none', fontSize: '1.4rem' }}>
-                Log Range Session
-              </h2>
-              <p
-                style={{
-                  margin: '0.2rem 0 0',
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.85rem',
-                }}
-              >
-                Log firearm rounds fired and automatically deduct ammo inventory in one action.
-              </p>
+      <div
+        className="modal-container modal-container-wide"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div className="modal-header-title">
+            <Crosshair size={22} className="text-accent" />
+            <div className="modal-header-text">
+              <h2>Log Range Session</h2>
+              <p>Deduct fired rounds from inventory & increment firearm barrel round counts</p>
             </div>
           </div>
-          <button className="btn-icon" onClick={onClose} title="Close">
-            ×
+          <button type="button" className="btn-icon" onClick={onClose} title="Close dialog">
+            <X size={18} />
           </button>
         </div>
 
         {error && (
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#f87171',
-              padding: '0.75rem 1rem',
-              borderRadius: '8px',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.9rem',
-            }}
-          >
-            <AlertTriangle size={18} />
-            {error}
+          <div className="notification-banner notification-banner-danger mx-6 mt-4">
+            <AlertTriangle size={16} />
+            <span>{error}</span>
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-        >
-          {/* Firearm Selector */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Select Firearm *
-            </label>
-            <AutocompleteInput
-              mode="select"
-              name="firearmId"
-              value={String(selectedFirearmId)}
-              onChange={(e) => {
-                setSelectedFirearmId(e.target.value ? Number(e.target.value) : '');
-                setSelectedAmmoId(''); // reset ammo selection on firearm change
-              }}
-              options={[
-                { value: '', label: '-- Choose Firearm --' },
-                ...firearms.map((f) => ({
-                  value: String(f.id),
-                  label: `${f.make} ${f.model} (${f.caliber})${f.serial_number ? ` • SN: ${f.serial_number}` : ''}`,
-                })),
-              ]}
-              required
-            />
-          </div>
-
-          {/* Ammo Selector */}
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '0.4rem',
-              }}
-            >
-              <label style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                Ammo Used (Optional - Deducts stock)
-              </label>
-              <label
-                style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
+        <form onSubmit={handleSubmit} className="modal-body">
+          {/* Firearm & Ammo Section */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Target size={16} className="text-accent" />
+                <h4 className="form-section-title">Weapon &amp; Ammunition Selection</h4>
+              </div>
+              <label className="form-checkbox-row">
                 <input
                   type="checkbox"
                   checked={showAllAmmo}
                   onChange={(e) => setShowAllAmmo(e.target.checked)}
-                  style={{ accentColor: 'var(--accent)' }}
                 />
-                Show all calibers
+                <span>Show all calibers</span>
               </label>
             </div>
-            <AutocompleteInput
-              mode="select"
-              name="ammoId"
-              value={String(selectedAmmoId)}
-              onChange={(e) => setSelectedAmmoId(e.target.value ? Number(e.target.value) : '')}
-              options={[
-                { value: '', label: '-- No ammo deduction (or range-supplied ammo) --' },
-                ...filteredAmmo.map((a) => ({
-                  value: String(a.id),
-                  label: `${a.type === 'factory' ? a.manufacturer || 'Factory' : 'Custom Handload'} • ${a.caliber} ${a.grain ? `${a.grain}gr ` : ''}${a.projectile || ''} — [In Stock: ${a.count} rds]`,
-                })),
-              ]}
-            />
-            {selectedAmmo && (
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--accent)',
-                  marginTop: '0.3rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                <CheckCircle size={14} /> Will deduct {roundsFired || 0} rounds from{' '}
-                {selectedAmmo.count} rounds currently in stock.
-              </div>
-            )}
-          </div>
 
-          {/* Rounds Fired & Quick Increments */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Rounds Fired *
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <input
-                type="number"
-                min="1"
-                className="form-input"
-                value={roundsFired}
-                onChange={(e) =>
-                  setRoundsFired(e.target.value === '' ? '' : parseInt(e.target.value) || 0)
-                }
-                required
-                style={{ fontSize: '1.1rem', fontWeight: 'bold' }}
-              />
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => addQuickRounds(25)}
-                style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem' }}
-              >
-                +25
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => addQuickRounds(50)}
-                style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem' }}
-              >
-                +50
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => addQuickRounds(100)}
-                style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem' }}
-              >
-                +100
-              </button>
-            </div>
-          </div>
-
-          {/* Date, Location, Cost Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-              gap: '1rem',
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                <Calendar
-                  size={14}
-                  style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
-                />
-                Date
-              </label>
-              <input
-                type="date"
-                className="form-input"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '0.85rem',
-                    color: 'var(--text-secondary)',
+            <div className="form-grid-2col">
+              <div className="form-group">
+                <label>Target Firearm *</label>
+                <AutocompleteInput
+                  mode="select"
+                  name="firearmId"
+                  value={String(selectedFirearmId)}
+                  onChange={(e) => {
+                    setSelectedFirearmId(e.target.value ? Number(e.target.value) : '');
+                    setSelectedAmmoId('');
                   }}
-                >
-                  <MapPin
-                    size={14}
-                    style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
+                  options={[
+                    { value: '', label: '-- Choose Firearm --' },
+                    ...firearms.map((f) => ({
+                      value: String(f.id),
+                      label: `${f.make} ${f.model} (${f.caliber})${f.serial_number ? ` • SN: ${f.serial_number}` : ''}`,
+                    })),
+                  ]}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Ammunition Expended (Deducts from Depot)</label>
+                <AutocompleteInput
+                  mode="select"
+                  name="ammoId"
+                  value={String(selectedAmmoId)}
+                  onChange={(e) => setSelectedAmmoId(e.target.value ? Number(e.target.value) : '')}
+                  options={[
+                    { value: '', label: '-- No depot deduction (Range / Surplus ammo) --' },
+                    ...filteredAmmo.map((a) => ({
+                      value: String(a.id),
+                      label: `${a.type === 'factory' ? a.manufacturer || 'Factory' : 'Custom Handload'} • ${a.caliber} ${a.grain ? `${a.grain}gr ` : ''}${a.projectile || ''} — [In Stock: ${a.count} rds]`,
+                    })),
+                  ]}
+                />
+                {selectedAmmo && (
+                  <div className="form-hint text-sky-400 flex items-center gap-1 mt-1">
+                    <CheckCircle size={14} className="shrink-0" />
+                    <span>
+                      Will deduct {roundsFired || 0} rounds from {selectedAmmo.count} rounds currently in stock.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Rounds Fired & Quick Increments */}
+            <div className="form-subcard mt-3">
+              <div className="form-grid-2col">
+                <div className="form-group">
+                  <label>Rounds Fired *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-input"
+                    value={roundsFired}
+                    onChange={(e) =>
+                      setRoundsFired(e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0)
+                    }
+                    required
                   />
-                  Range Location
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsRangePickerOpen(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#3b82f6',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: 0,
-                    fontWeight: 600,
-                  }}
-                >
-                  <Target size={12} />
-                  Browse Facilities
-                </button>
+                </div>
+
+                <div className="form-group">
+                  <label>Quick Quantity Increments</label>
+                  <div className="barcode-lookup-tray">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => addQuickRounds(25)}
+                    >
+                      +25
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => addQuickRounds(50)}
+                    >
+                      +50
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => addQuickRounds(100)}
+                    >
+                      +100
+                    </button>
+                  </div>
+                </div>
               </div>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Gun Club / BLM"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
             </div>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
+          </div>
+
+          {/* Facility Location, Date & Cost */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Calendar size={16} className="text-accent" />
+                <h4 className="form-section-title">Session Logistics &amp; Facility</h4>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setIsRangePickerOpen(true)}
               >
-                <DollarSign
-                  size={14}
-                  style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
+                <MapPin size={14} /> Browse Facilities
+              </button>
+            </div>
+
+            <div className="form-grid-3col">
+              <div className="form-group">
+                <label>Date Fired *</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
                 />
-                Cost / Range Fee ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
+              </div>
+
+              <div className="form-group">
+                <label>Range Facility / Location</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Red Rock Gun Club, BLM Public Land"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Range Fee / Lane Cost ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="form-input"
+                  placeholder="0.00"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Session Notes / Groupings / Malfunctions</label>
+              <textarea
                 className="form-input"
-                placeholder="0.00"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
+                rows={2}
+                placeholder="Zero confirmed at 50 yds, chronographed 10-shot string, zero stoppages..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <FileText
-                size={14}
-                style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
-              />
-              Session Notes / Malfunctions
-            </label>
-            <textarea
-              className="form-input"
-              rows={2}
-              placeholder="e.g. Zeroed red dot at 25 yards, tested new handload grouping, 0 malfunctions"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          <div
-            className="modal-actions"
-            style={{
-              marginTop: '0.5rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--border-light)',
-            }}
-          >
+          {/* Modal Footer */}
+          <div className="modal-footer">
             <button
               type="button"
               className="btn-secondary"
@@ -502,7 +363,6 @@ export const RangeSessionModal: React.FC<RangeSessionModalProps> = ({
               type="submit"
               className="btn-primary"
               disabled={isSubmitting}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
               <Crosshair size={16} />
               {isSubmitting ? 'Logging...' : 'Save & Log Range Trip'}
@@ -510,6 +370,7 @@ export const RangeSessionModal: React.FC<RangeSessionModalProps> = ({
           </div>
         </form>
       </div>
+
       <RangePickerModal
         isOpen={isRangePickerOpen}
         onClose={() => setIsRangePickerOpen(false)}

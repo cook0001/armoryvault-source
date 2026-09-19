@@ -253,4 +253,74 @@ describe('CSV Import Engine (RFC 4180 & Competitor Converters)', () => {
       expect(toUpdate[0].updatedItem.model).toBe('19 MOS');
     });
   });
+
+  describe('LoadBench Recipe (.loadbench / .ldb) Ingestion', () => {
+    it('ingests structured .loadbench recipe JSON and maps all handload attributes', () => {
+      const loadbenchJson = JSON.stringify({
+        format: 'loadbench_recipe',
+        version: '1.0.0',
+        metadata: {
+          name: '6.5 Creedmoor 140gr Match',
+          lot_number: 'LOT-2026-09-A',
+          batch_size: 50,
+          author: 'Daniel C.',
+          target_firearm: 'Tikka T3x TAC A1',
+          notes: 'Sub-half-MOA verified'
+        },
+        cartridge: {
+          name: '6.5 Creedmoor',
+          coal_in: 2.800,
+          brass_manufacturer: 'Lapua',
+          brass_firings: 2
+        },
+        projectile: {
+          name: 'ELD Match',
+          manufacturer: 'Hornady',
+          weight_grains: 140,
+          cbto_in: 2.195,
+          freebore_jump_in: 0.025
+        },
+        propellant: {
+          name: 'H4350',
+          charge_grains: 41.5
+        },
+        primer: {
+          name: 'Federal 210M Large Rifle Match'
+        },
+        simulated: {
+          muzzle_velocity_fps: 2715,
+          max_pressure_psi: 58420,
+          obt_node: 'Node 4'
+        },
+        chronograph: {
+          measured_average_fps: 2722,
+          extreme_spread_fps: 14,
+          standard_deviation_fps: 4.8
+        },
+        economics: {
+          cost_per_round_usd: 0.68
+        }
+      });
+
+      const parsed = parseRawCsv(loadbenchJson);
+      expect(detectEntityType(parsed.headers)).toBe('ammo');
+      const mappings = autoMapHeaders(parsed.headers, 'ammo');
+      const result = transformAmmoRows(parsed.rawRows, mappings);
+
+      expect(result.valid).toHaveLength(1);
+      const ammo = result.valid[0];
+      expect(ammo.caliber).toBe('6.5 Creedmoor');
+      expect(ammo.projectile).toBe('ELD Match');
+      expect(ammo.grain).toBe(140);
+      expect(ammo.powder).toBe('H4350');
+      expect(ammo.powderCharge).toBe(41.5);
+      expect(ammo.count).toBe(50);
+      expect(ammo.brass).toBe('Lapua (2x fired)');
+      expect(ammo.notes).toContain('Lot #LOT-2026-09-A');
+      expect(ammo.notes).toContain('Author: Daniel C.');
+      expect(ammo.notes).toContain('Rifle: Tikka T3x TAC A1');
+      expect(ammo.notes).toContain('Node 4');
+      expect(ammo.notes).toContain('Chrono: 2722 fps');
+    });
+  });
 });

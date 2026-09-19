@@ -1,0 +1,14 @@
+# Non-markdown and plaintext documentation files
+LICENSE
+LICENSE*
+VersionControl
+*.txt
+*.log
+*.csv
+
+# Build, dependency, and native binary directories
+node_modules/
+target/
+src-tauri/target/
+dist/
+dist-electron/

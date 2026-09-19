@@ -1,18 +1,56 @@
 import React, { useState } from 'react';
-import { Shield, Key, AlertTriangle, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
+import {
+  Shield,
+  AlertTriangle,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  UploadCloud,
+  ShieldCheck,
+  AlertCircle,
+  ArrowRight,
+} from 'lucide-react';
 
 interface Props {
   isSetup: boolean;
   onUnlocked: () => void;
 }
 
-export const VaultLogin = ({ isSetup, onUnlocked }: Props) => {
+export const VaultLogin: React.FC<Props> = ({ isSetup, onUnlocked }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [capsLockActive, setCapsLockActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
   const [showRecoveryCode, setShowRecoveryCode] = useState(false);
   const [useRecovery, setUseRecovery] = useState(false);
+
+  const handleKeyEvent = (e: React.KeyboardEvent) => {
+    setCapsLockActive(e.getModifierState('CapsLock'));
+  };
+
+  const handleRestoreDatabase = async () => {
+    if (!window.api || !window.api.restoreBackup) return;
+    try {
+      const res = await window.api.restoreBackup();
+      if (res.canceled) return;
+      if (res.success) {
+        alert(
+          res.message ||
+            'Database successfully imported! You can now log in with the imported database password.'
+        );
+        window.location.reload();
+      } else {
+        setError(res.error || 'Failed to import database.');
+      }
+    } catch (e: any) {
+      setError(e.message || 'An error occurred while importing the database.');
+    }
+  };
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,128 +62,217 @@ export const VaultLogin = ({ isSetup, onUnlocked }: Props) => {
       setError('Passwords do not match.');
       return;
     }
-    
+
+    setIsSubmitting(true);
+    setError('');
     try {
       const code = await window.api.setupVault(password);
       setRecoveryCode(code);
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to setup vault. Check console for details.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (useRecovery) {
-      const success = await window.api.unlockWithRecoveryCode(password.trim());
-      if (success) {
-        onUnlocked();
+    setIsSubmitting(true);
+
+    try {
+      if (useRecovery) {
+        const success = await window.api.unlockWithRecoveryCode(password.trim());
+        if (success) {
+          onUnlocked();
+        } else {
+          setError('Invalid recovery code.');
+        }
       } else {
-        setError('Invalid recovery code.');
+        const success = await window.api.unlockVault(password);
+        if (success) {
+          onUnlocked();
+        } else {
+          setError('Incorrect password.');
+        }
       }
-    } else {
-      const success = await window.api.unlockVault(password);
-      if (success) {
-        onUnlocked();
-      } else {
-        setError('Incorrect password.');
-      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to unlock vault.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (recoveryCode) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: '2rem', textAlign: 'center', background: 'var(--bg-primary)' }}>
-        <AlertTriangle size={64} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
-        <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Save Your Recovery Code!</h2>
-        <p style={{ maxWidth: '600px', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
-          Your Vault has been successfully encrypted with military-grade AES-256-GCM. 
-          If you ever forget your password, your data is mathematically unrecoverable unless you have this code. 
+      <div className="vault-recovery-screen">
+        <div className="bg-mesh" />
+        <div className="bg-grid" />
+        <div className="vault-icon-badge vault-icon-badge-warning">
+          <AlertTriangle size={38} className="vault-recovery-icon" />
+        </div>
+        <h2 className="vault-recovery-title">Save Your Recovery Code!</h2>
+        <p className="vault-recovery-desc">
+          Your Vault has been successfully encrypted with military-grade AES-256-GCM.
+          If you ever forget your password, your data is mathematically unrecoverable unless you have this code.
           Write it down and store it somewhere safe. <strong>It will never be shown again.</strong>
         </p>
-        
-        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '2rem 3rem', borderRadius: '8px', wordBreak: 'break-all', fontSize: '1.2rem', fontFamily: 'monospace', border: '1px solid var(--border-light)', position: 'relative', maxWidth: '800px', marginBottom: '2rem', color: 'var(--text-primary)' }}>
+
+        <div className="vault-recovery-code-box">
           {showRecoveryCode ? recoveryCode : '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'}
-          <button 
-            type="button" 
+          <button
+            type="button"
+            className="vault-recovery-reveal-btn"
             onClick={() => setShowRecoveryCode(!showRecoveryCode)}
-            style={{ position: 'absolute', top: '10px', right: '10px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            title={showRecoveryCode ? 'Hide Recovery Code' : 'Reveal Recovery Code'}
           >
             {showRecoveryCode ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
 
-        <button className="btn-primary" onClick={onUnlocked} style={{ padding: '1rem 3rem', fontSize: '1.1rem' }}>
-          I have safely stored my code. Let's Go.
+        <button
+          type="button"
+          className="btn-primary vault-recovery-action-btn"
+          onClick={onUnlocked}
+        >
+          <span>I have safely stored my code. Let's Go.</span>
+          <ArrowRight size={18} />
         </button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
-      <div className="card" style={{ width: '100%', maxWidth: '450px', padding: '2.5rem', textAlign: 'center' }}>
-        <Shield size={64} style={{ color: 'var(--accent)', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 10px rgba(59,130,246,0.3))' }} />
-        
-        <h1 style={{ marginBottom: '0.5rem', fontSize: '1.8rem' }}>ArmoryVault</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          {!isSetup ? 'Create a master password to encrypt your local vault.' : (useRecovery ? 'Enter your 64-character recovery code.' : 'Enter your master password to unlock your vault.')}
+    <div className="vault-login-screen">
+      <div className="bg-mesh" />
+      <div className="bg-grid" />
+      <div className="card vault-login-card">
+        <div className="vault-icon-badge">
+          <Shield size={38} />
+        </div>
+
+        <h1 className="vault-login-title">ArmoryVault</h1>
+
+        <div className="vault-security-pill">
+          <ShieldCheck size={13} />
+          <span>AES-256-GCM Zero-at-Rest</span>
+        </div>
+
+        <p className="vault-login-subtitle">
+          {!isSetup
+            ? 'Create a master password to encrypt your local firearm vault.'
+            : (useRecovery
+              ? 'Enter your 64-character recovery code to unlock your vault.'
+              : 'Enter your master password to unlock your vault.')}
         </p>
 
-        <form onSubmit={!isSetup ? handleSetup : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', display: 'flex' }}>
+        <form onSubmit={!isSetup ? handleSetup : handleLogin} className="vault-login-form">
+          <div className="vault-input-group">
+            <div className="vault-input-icon-slot">
               {useRecovery ? <KeyRound size={20} /> : <Lock size={20} />}
             </div>
             <input
-              type={useRecovery ? "text" : "password"}
-              placeholder={useRecovery ? "Recovery Code" : "Master Password"}
+              type={useRecovery || showPassword ? 'text' : 'password'}
+              placeholder={useRecovery ? 'Paste 64-character Recovery Code' : 'Master Password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
-              style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem', textAlign: 'left', letterSpacing: '0.1em' }}
+              onKeyDown={handleKeyEvent}
+              onKeyUp={handleKeyEvent}
+              className="form-input vault-input-padded"
               autoFocus
+              autoComplete={!isSetup ? 'new-password' : 'current-password'}
             />
+            {!useRecovery && (
+              <button
+                type="button"
+                className="vault-input-toggle-slot"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
           </div>
 
           {!isSetup && (
-            <div style={{ position: 'relative' }}>
-              <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', display: 'flex' }}>
+            <div className="vault-input-group">
+              <div className="vault-input-icon-slot">
                 <Lock size={20} />
               </div>
               <input
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="Confirm Master Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem', textAlign: 'left', letterSpacing: '0.1em' }}
+                onKeyDown={handleKeyEvent}
+                onKeyUp={handleKeyEvent}
+                className="form-input vault-input-padded"
+                autoComplete="new-password"
               />
+              <button
+                type="button"
+                className="vault-input-toggle-slot"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           )}
 
-          {error && <div style={{ color: 'var(--danger)', fontSize: '0.9rem', textAlign: 'left', padding: '0.5rem', background: 'rgba(239,68,68,0.1)', borderRadius: '4px' }}>{error}</div>}
+          {capsLockActive && (
+            <div className="vault-caps-warning">
+              <AlertCircle size={14} />
+              <span>Caps Lock is ON</span>
+            </div>
+          )}
 
-          <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem', padding: '0.8rem', fontSize: '1.1rem' }}>
-            {!isSetup ? 'Encrypt Vault' : 'Unlock'}
+          {error && <div className="vault-error-alert">{error}</div>}
+
+          <button
+            type="submit"
+            disabled={isSubmitting || !password.trim()}
+            className="btn-primary vault-submit-btn"
+          >
+            <span>{!isSetup ? 'Encrypt & Create Vault' : 'Unlock'}</span>
+            <ArrowRight size={18} />
           </button>
         </form>
 
         {isSetup && (
-          <div style={{ marginTop: '1.5rem' }}>
-            <button 
+          <div className="vault-alt-toggle-wrap">
+            <button
+              type="button"
               onClick={() => {
                 setUseRecovery(!useRecovery);
                 setPassword('');
                 setError('');
               }}
-              style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.9rem' }}
+              className="vault-alt-toggle"
             >
               {useRecovery ? 'Back to Password Login' : 'Forgot Password? Use Recovery Code'}
             </button>
           </div>
         )}
+
+        <div className="vault-divider">
+          <span>OR</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleRestoreDatabase}
+          className="vault-restore-action-btn"
+          title="Import an existing vault or third-party database (.enc, .zip, .sqlite, .json, .csv, .tsv)"
+        >
+          <UploadCloud size={17} />
+          <span>Restore or Import Database</span>
+        </button>
+        <p className="vault-restore-hint">
+          Migrate existing backups, MyGunDB, GunSafe, FastBound, or CSV spreadsheets
+        </p>
       </div>
     </div>
   );

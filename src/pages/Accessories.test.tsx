@@ -99,6 +99,17 @@ describe('Accessories Component & Tactical Detail Cards', () => {
       value: 89.99,
       mounts: [],
     },
+    {
+      id: 106,
+      type: 'Magazine',
+      manufacturer: 'Smith & Wesson',
+      model: '4566 8rd Magazine',
+      capacity: 8,
+      caliber: '.45 ACP',
+      quantity: 3,
+      value: 39.99,
+      mounts: [],
+    },
   ];
 
   beforeEach(() => {
@@ -250,4 +261,67 @@ describe('Accessories Component & Tactical Detail Cards', () => {
       expect(screen.getByText('All Storage Locations')).toBeDefined();
     });
   });
+
+  test('renders command metrics deck with counts and valuations', async () => {
+    render(
+      <MemoryRouter>
+        <Accessories />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Gear Items')).toBeDefined();
+      expect(screen.getByText('Optics & Sights')).toBeDefined();
+      expect(screen.getAllByText('Magazines').length).toBeGreaterThan(0);
+      expect(screen.getByText('Suppressors & NFA')).toBeDefined();
+      expect(screen.getByText('Gear Valuation')).toBeDefined();
+    });
+  });
+
+  test('filters accessories via category filter chips', async () => {
+    render(
+      <MemoryRouter>
+        <Accessories />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Trijicon RMR Type 2/i)).toBeDefined();
+    });
+
+    // Click Optics filter chip in the filter bar
+    const filterBar = screen.getByTestId('filter-chips-bar');
+    const opticsChip = within(filterBar).getByRole('button', { name: /Optics/i });
+    fireEvent.click(opticsChip);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Trijicon RMR Type 2/i)).toBeDefined();
+      expect(screen.queryByText(/Dead Air Sandman-S/i)).toBeNull();
+      expect(screen.queryByText(/MDT ACC Elite/i)).toBeNull();
+    });
+
+    // Click All Items chip to restore
+    const allChip = within(filterBar).getByRole('button', { name: /All Items/i });
+    fireEvent.click(allChip);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Dead Air Sandman-S/i)).toBeDefined();
+      expect(screen.getByText(/MDT ACC Elite/i)).toBeDefined();
+    });
+  });
+
+  test('renders multi-quantity accessories with unit price badge cleanly', async () => {
+    render(
+      <MemoryRouter>
+        <Accessories />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/3x Smith & Wesson 4566 8rd Magazine/i)).toBeDefined();
+      // Verify unit price badge is rendered
+      expect(screen.getByText(/\(\$39\.99 ea\)/i)).toBeDefined();
+    });
+  });
 });
+

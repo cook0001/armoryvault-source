@@ -2,61 +2,48 @@
 
 ## Supported Versions
 
-ArmoryVault maintains active security updates and patch support for the **2 most current stable releases** across both Desktop and Mobile ecosystems. All older legacy versions are considered End-of-Life (EOL) and are pruned from active release channels.
+ArmoryVault Desktop (Tauri v2 Native) is actively maintained. Security updates, cryptographic patches, and critical hotfixes are provided for the following release tracks:
 
-### Desktop Application (`cook0001/ArmoryVault`)
-
-| Version | Status | Security Support |
-| :--- | :--- | :---: |
-| **`v2.9.0`** | Current Stable Production | Supported |
-| **`v2.8.2`** | Previous Stable Production | Supported |
-| **`<= v2.8.1`** | Legacy Releases (Pruned) | EOL (Upgrade Required) |
-
----
-
-### Mobile Companion Application (`cook0001/ArmoryVault-Companion-App`)
-
-| Version | Status | Security Support |
-| :--- | :--- | :---: |
-| **`v2.7.11`** | Current Stable Production | Supported |
-| **`v2.7.10`** | Previous Production Release | Supported |
-| **`<= v2.7.9`** | Legacy Releases (Pruned) | EOL (Upgrade Required) |
-
----
-
-### Modular Extensions (`cook0001/ArmoryVault-Modules`)
-
-| Version | Status | Security Support |
-| :--- | :--- | :---: |
-| **`v1.0.0`** | Current Production Baseline | Supported |
-
----
-
-## Release Retention Policy
-
-To prevent users from inadvertently running outdated or vulnerable binaries, GitHub Releases across both repositories strictly adhere to the following retention rules:
-1. **Stable Channel**: Exactly the **2 most current stable releases** are retained with binary installers.
-2. **Nightly Channel**: Exactly the **1 most current nightly preview release** is retained with binary installers.
-3. **Automated Pruning**: When a new release is published, older superseded releases are pruned from the releases distribution page.
-
----
-
-## Core Security & Privacy Model
-
-ArmoryVault is engineered from the ground up to protect user privacy and firearms record confidentiality:
-
-- **100% Zero-Cloud Architecture**: ArmoryVault never transmits firearms data, ammunition counts, serial numbers, ATF Bound Book ledgers, or photos to remote cloud servers.
-- **Strong Encryption at Rest**: Encrypted vault databases use industry-standard **AES-256-GCM** encryption with hardened **PBKDF2** key derivation.
-- **Local Wi-Fi P2P Pairing**: Mobile companion sync operates strictly peer-to-peer over the user's local Wi-Fi router (LAN) using ephemeral single-use QR pairing tokens.
+| Version Track | Supported | Notes |
+| :--- | :--- | :--- |
+| **v2.x (Beta / Main)** | :white_check_mark: Yes | Active Tauri v2 desktop development |
+| **< v2.0.0** | :x: No | Deprecated legacy releases |
 
 ---
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability or potential exploit within ArmoryVault:
+We take the cryptographic integrity, privacy, and safety of firearm inventory data with utmost seriousness. If you discover a security vulnerability, encryption flaw, memory safety issue, or local LAN sync vulnerability, please report it immediately.
 
-1. **GitHub Security Advisory (Preferred)**: Submit a private report via the **Security** -> **Advisories** -> **Report a vulnerability** tab on GitHub.
-2. **Issue Tracker**: If the issue does not pose an immediate risk of sensitive data exposure, you may also open an issue on the [ArmoryVault Issues](https://github.com/cook0001/ArmoryVault/issues) tracker.
+### How to Report
 
-Please include detailed reproduction steps, environment details (OS, architecture, app version), and proof-of-concept payloads where appropriate. We take all security disclosures seriously and will review and respond promptly.
+1. **GitHub Private Vulnerability Reporting (Preferred)**:
+   - Navigate to the **Security** tab of the repository (`cook0001/ArmoryVault`).
+   - Click **Report a vulnerability** to create a private security advisory.
+   - This ensures details remain confidential while a fix is developed and tested.
 
+2. **Responsible Disclosure Protocol**:
+   - **Do NOT** open a public issue, discussion thread, or PR containing sensitive vulnerability information.
+   - Never include real serial numbers, names, addresses, or private cryptographic keys in reports or logs.
+   - Provide a clear description including affected platforms (macOS, Windows, Linux) and minimal reproduction steps.
+
+### Response & Remediation Timelines
+
+- **Initial Acknowledgment**: Within **48 hours** of report receipt.
+- **Triage & Assessment**: Within **5 business days**.
+- **Patch Deployment**: Hotfix releases will be compiled and released across macOS, Windows, and Linux via automated GitHub Actions release workflows.
+
+---
+
+## Scope & Security Architecture
+
+ArmoryVault operates under a **Strict Zero-Cloud Architecture**:
+
+- **Local Storage & Database**: All firearm records, maintenance logs, NFA tax stamps, and photos reside exclusively in an embedded SQLite database (`rusqlite`) on the user's local filesystem. No data is ever sent to cloud servers, remote databases, or telemetry aggregators.
+- **Local LAN Sync**: Peer-to-peer sync with ArmoryVault Mobile Companion operates strictly within the user's local Wi-Fi subnet using a native Axum HTTP daemon bound to the host interface. Sessions are protected via cryptographic one-time pairing handshakes.
+- **Zero Remote Telemetry**: ArmoryVault includes zero tracking pixels, analytics beacons, or remote logging services.
+- **Memory Safety**: The native backend is built with Rust with bounds checks and strict compiler linter policies.
+
+---
+
+*Copyright © 2026 Daniel C. (cook0001). All rights reserved.*

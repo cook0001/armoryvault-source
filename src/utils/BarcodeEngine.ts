@@ -19,6 +19,120 @@ export const decodeHTMLEntities = (text: string | undefined): string => {
 };
 
 export const parseBarcodeData = (item: any, ammoList: Ammo[] = []): ParsedBarcodeResult => {
+  if (!item) {
+    return { category: 'unknown', item, bestTitle: '' };
+  }
+
+  // 0. Detect LoadBench / ArmoryVault Handload Payloads (Direct QR Scan, JSON payload or .load file)
+  let rawJsonObj: any = null;
+  if (typeof item === 'string') {
+    const trimmed = item.trim();
+    if (trimmed.startsWith('{') && (trimmed.includes('handload') || trimmed.includes('LoadBench') || trimmed.includes('ArmoryVault'))) {
+      try {
+        rawJsonObj = JSON.parse(trimmed);
+      } catch {}
+    }
+  } else if (typeof item === 'object') {
+    if (
+      item.type === 'handload' ||
+      item.source === 'LoadBench' ||
+      item.app === 'ArmoryVault' ||
+      item.format === 'load_project' ||
+      item.format === 'loadbench_recipe'
+    ) {
+      rawJsonObj = item;
+    } else if (typeof item.title === 'string' && item.title.trim().startsWith('{')) {
+      try {
+        rawJsonObj = JSON.parse(item.title.trim());
+      } catch {}
+    } else if (typeof item.upc === 'string' && item.upc.trim().startsWith('{')) {
+      try {
+        rawJsonObj = JSON.parse(item.upc.trim());
+      } catch {}
+    } else if (typeof item.upcOrId === 'string' && item.upcOrId.trim().startsWith('{')) {
+      try {
+        rawJsonObj = JSON.parse(item.upcOrId.trim());
+      } catch {}
+    }
+  }
+
+  if (
+    rawJsonObj &&
+    (rawJsonObj.type === 'handload' ||
+      rawJsonObj.source === 'LoadBench' ||
+      rawJsonObj.app === 'ArmoryVault' ||
+      rawJsonObj.format === 'load_project' ||
+      rawJsonObj.format === 'loadbench_recipe')
+  ) {
+    const cal = rawJsonObj.cal || rawJsonObj.caliber || rawJsonObj.cartridge?.name || rawJsonObj.cartridge || '';
+    const bullet = rawJsonObj.bullet || rawJsonObj.projectile?.name || rawJsonObj.projectile || '';
+    const grainNum = rawJsonObj.grain || rawJsonObj.projectile?.weight_grains || (bullet ? parseInt(bullet) || undefined : undefined);
+    const powder = rawJsonObj.powder_name || rawJsonObj.propellant?.name || rawJsonObj.powder || '';
+    const chargeNum =
+      rawJsonObj.powder_charge ||
+      rawJsonObj.chargeGrains ||
+      rawJsonObj.charge_grains ||
+      rawJsonObj.propellant?.charge_grains ||
+      (rawJsonObj.powder ? parseFloat(rawJsonObj.powder.match(/([\d.]+)\s*gr/i)?.[1] || '') || undefined : undefined);
+    const primer = rawJsonObj.primer?.name || rawJsonObj.primer || '';
+    const lot =
+      rawJsonObj.metadata?.lot_number ||
+      rawJsonObj.lot ||
+      rawJsonObj.lotNumber ||
+      (rawJsonObj.upc && !rawJsonObj.upc.startsWith('{') ? rawJsonObj.upc : undefined);
+    const count = rawJsonObj.metadata?.batch_size || rawJsonObj.count || rawJsonObj.quantity || 50;
+    const coal = rawJsonObj.coal || rawJsonObj.oal || rawJsonObj.cartridge?.coal_in || undefined;
+    const cbto = rawJsonObj.projectile?.cbto_in || rawJsonObj.cbto;
+    const jump = rawJsonObj.projectile?.freebore_jump_in !== undefined ? rawJsonObj.projectile.freebore_jump_in : rawJsonObj.jump;
+    const fps = rawJsonObj.simulated?.muzzle_velocity_fps || rawJsonObj.simulated?.muzzleVelocityFps || rawJsonObj.fps;
+    const psi = rawJsonObj.simulated?.max_pressure_psi || rawJsonObj.simulated?.maxPressurePsi || rawJsonObj.psi;
+    const obtNode = rawJsonObj.simulated?.obt_node ? `Node: ${rawJsonObj.simulated.obt_node}` : '';
+    const author = rawJsonObj.metadata?.author ? `Author: ${rawJsonObj.metadata.author}` : '';
+    const targetRifle = rawJsonObj.metadata?.target_firearm ? `Rifle: ${rawJsonObj.metadata.target_firearm}` : '';
+    const chrono = rawJsonObj.chronograph?.measured_average_fps
+      ? `Chrono: ${rawJsonObj.chronograph.measured_average_fps} fps (SD ${rawJsonObj.chronograph.standard_deviation_fps || 0})`
+      : '';
+
+    const noteParts = [
+      lot ? `Lot #${lot}` : '',
+      author,
+      targetRifle,
+      fps ? `${fps} fps` : '',
+      psi ? `${psi} psi` : '',
+      obtNode,
+      chrono,
+      cbto ? `CBTO: ${cbto}"` : '',
+      jump !== undefined ? `Jump: ${jump}"` : '',
+      rawJsonObj.metadata?.notes || rawJsonObj.notes || ''
+    ].filter(Boolean);
+
+    const titleParts = [rawJsonObj.metadata?.name || '', cal, bullet, powder ? `(${powder})` : ''].filter(Boolean);
+    const bestTitle = rawJsonObj.metadata?.name || (titleParts.length > 0 ? titleParts.join(' ') : 'LoadBench Custom Handload');
+
+    return {
+      category: 'ammo',
+      item,
+      bestTitle,
+      foundCost: (rawJsonObj.economics?.cost_per_round_usd || rawJsonObj.costPerRound)
+        ? Number(rawJsonObj.economics?.cost_per_round_usd || rawJsonObj.costPerRound)
+        : undefined,
+      parsedAmmo: {
+        type: 'handload',
+        caliber: String(cal),
+        grain: grainNum,
+        projectile: String(bullet),
+        powder: String(powder),
+        powderCharge: chargeNum,
+        primer: String(primer),
+        oal: coal ? Number(coal) : undefined,
+        count: Number(count) || 50,
+        notes: noteParts.join(' • '),
+        upc_code: lot ? String(lot) : (typeof item === 'string' ? '' : (item.upc && !item.upc.startsWith('{') ? String(item.upc) : '')),
+        manufacturer: rawJsonObj.format === 'loadbench_recipe' ? 'LoadBench' : 'Handload',
+      }
+    };
+  }
+
   let foundName = item.title || '';
   if (item.offers && item.offers.length > 0) {
     const titles = [item.title, ...item.offers.map((o: any) => decodeHTMLEntities(o.title))].filter(

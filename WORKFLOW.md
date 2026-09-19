@@ -5,6 +5,7 @@ This document outlines the standard engineering workflow, quality gates, domain 
 ---
 
 ## 📋 Table of Contents
+
 1. [Master Workflow Overview](#-master-workflow-overview)
 2. [Local Development Lifecycle](#-local-development-lifecycle)
 3. [Quality Assurance & Testing](#-quality-assurance--testing)
@@ -46,7 +47,9 @@ flowchart TD
 ## 💻 Local Development Lifecycle
 
 ### 1. Branching Strategy
+
 Always branch from the latest `main`:
+
 ```bash
 git checkout main
 git pull origin main
@@ -54,15 +57,20 @@ git checkout -b feat/your-feature-name   # or fix/your-bugfix-name
 ```
 
 ### 2. Starting the Application
+
 Launch the Vite development server with Hot Module Replacement (HMR) and Electron desktop wrapper concurrently:
+
 ```bash
 npm run electron:dev
 ```
-* **Frontend (`src/`)**: React components and styles hot-reload immediately upon save.
-* **Electron Main (`electron/main.js`)**: Requires restarting the command if IPC bridges or window lifecycle hooks change.
+
+- **Frontend (`src/`)**: React components and styles hot-reload immediately upon save.
+- **Electron Main (`electron/main.js`)**: Requires restarting the command if IPC bridges or window lifecycle hooks change.
 
 ### 3. Resetting & Cleaning Workspace
+
 If you encounter stale build artifacts or cache collisions:
+
 ```bash
 npm run clean:fresh
 ```
@@ -72,20 +80,23 @@ npm run clean:fresh
 ## 🧪 Quality Assurance & Testing
 
 ### 1. Fast Staged-File Linter (Biome)
+
 The repository uses [Biome](biome.json) for sub-250ms linting and formatting.
 
-* **Lint Check**: `npm run lint`
-* **Auto-Fix Issues**: `npm run lint:fix`
-* **Format Code**: `npm run format`
-* **Combined Check**: `npm run check`
+- **Lint Check**: `npm run lint`
+- **Auto-Fix Issues**: `npm run lint:fix`
+- **Format Code**: `npm run format`
+- **Combined Check**: `npm run check`
 
 ### 2. Unit & Integration Testing (Vitest)
-* **Single Run**: `npm test`
-* **Interactive Watch Mode**: `npm run test:watch`
+
+- **Single Run**: `npm test`
+- **Interactive Watch Mode**: `npm run test:watch`
 
 ### 3. Git Hooks (Husky + lint-staged)
-* **Pre-Commit**: Automatically lints, formats, and tests only staged files before creating the commit.
-* **Pre-Push**: Verifies that TypeScript compiles cleanly (`npm run build`) before pushing to the remote repository.
+
+- **Pre-Commit**: Automatically lints, formats, and tests only staged files before creating the commit.
+- **Pre-Push**: Verifies that TypeScript compiles cleanly (`npm run build`) before pushing to the remote repository.
 
 ---
 
@@ -122,24 +133,31 @@ ArmoryVault uses a **Unified Release Strategy** mapped to semantic versioning (`
 ### Step-by-Step Release Flow
 
 1. **Run Automated Pre-Flight Check**:
+
    ```bash
    npm run verify:preflight
    ```
+
    Validates package manifests, app icons, git status, linter, TypeScript build, and Vitest suite in one command.
 
 2. **Interactive Version Bumping**:
+
    ```bash
    npm run release:prep
    ```
+
    Prompts for release type (`major`, `minor`, or `patch`) and updates `package.json`.
 
 3. **Generate Changelog Snippet**:
+
    ```bash
    npm run changelog:draft
    ```
+
    Extracts commits since the last tag, categorizes them, and prints formatted Markdown to paste into `CHANGELOG.md`.
 
 4. **Commit & Push Tag**:
+
    ```bash
    git commit -am "chore(release): prepare v2.8.0"
    git tag v2.8.0
@@ -147,10 +165,12 @@ ArmoryVault uses a **Unified Release Strategy** mapped to semantic versioning (`
    ```
 
 5. **Automated Multi-Platform Packaging**:
+
    GitHub Actions (`.github/workflows/release.yml`) builds:
-   * **macOS**: Universal dmg and zip (`x64` + `arm64`)
-   * **Windows**: NSIS Setup installer and portable exe
-   * **Linux**: AppImage
+
+   - **macOS**: Universal dmg and zip (`x64` + `arm64`)
+   - **Windows**: NSIS Setup installer and portable exe
+   - **Linux**: AppImage
 
 ---
 

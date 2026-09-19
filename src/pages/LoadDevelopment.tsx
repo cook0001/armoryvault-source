@@ -227,17 +227,9 @@ export const LoadDevelopment = () => {
   }, [selectedTest]);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="page-container">
       {/* Header */}
-      <div
-        className="no-print"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-        }}
-      >
+      <div className="no-print page-header">
         <div>
           <h1
             style={{
@@ -285,14 +277,7 @@ export const LoadDevelopment = () => {
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.75rem',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}
-        >
+        <div className="header-actions">
           <button
             className="btn-secondary"
             onClick={() => setShowCostCalculator(!showCostCalculator)}

@@ -1,7 +1,8 @@
-import { Save, Upload, X } from 'lucide-react';
+import { Camera, Clock, DollarSign, FileText, Package, Save, Shield, Upload, Wrench, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AutocompleteInput } from '../components/AutocompleteInput';
+import { RifleIcon } from '../components/CustomIcons';
 import { StorageLocationSelect } from '../components/StorageBadge';
 import { Firearm, StorageLocation } from '../types';
 import { formatCaliber } from '../utils/caliberHelpers';
@@ -18,7 +19,6 @@ import {
   getItemStorageLocation,
   saveStorageLocations,
 } from '../utils/StorageSync';
-import { getLocalImageUrl } from '../utils/imageUrl';
 
 export const FirearmForm = () => {
   const navigate = useNavigate();
@@ -156,11 +156,9 @@ export const FirearmForm = () => {
   };
 
   const handlePhotoSelectNative = async () => {
-    console.log('Renderer: handlePhotoSelectNative called. window.api =', !!window.api);
     if (!window.api) return;
     try {
       const paths = await window.api.selectAndSavePhoto();
-      console.log('Renderer: selectAndSavePhoto returned', paths);
       if (paths && paths.length > 0) {
         setPreviews((prev) => [
           ...prev,
@@ -168,7 +166,7 @@ export const FirearmForm = () => {
         ]);
       }
     } catch (e) {
-      console.error('Renderer: selectAndSavePhoto failed', e);
+      console.error('Photo selection error:', e);
     }
   };
 
@@ -200,7 +198,7 @@ export const FirearmForm = () => {
       purchase_price: parseCurrencyOrNull(formData.purchase_price),
       sold_price: parseCurrencyOrNull(formData.sold_price),
       photos: finalPhotos,
-      image_path: finalPhotos.length > 0 ? finalPhotos[0] : '', // Keep backward compatibility
+      image_path: finalPhotos.length > 0 ? finalPhotos[0] : '',
       storageLocationId: storageLocationId || undefined,
     };
 
@@ -214,7 +212,6 @@ export const FirearmForm = () => {
       } else if (res && typeof res.id === 'number') {
         savedId = res.id;
       } else {
-        // Fallback: fetch all firearms and find the highest ID
         const all = await window.api.getFirearms();
         if (all && all.length > 0) {
           savedId = Math.max(...all.map((f: any) => f.id || 0));
@@ -248,7 +245,13 @@ export const FirearmForm = () => {
   return (
     <div className="form-page">
       <div className="page-header">
-        <h1>{id ? 'Edit Firearm' : 'Add Firearm'}</h1>
+        <div className="page-header-title">
+          <RifleIcon size={24} color="var(--accent)" />
+          <div>
+            <h1>{id ? 'Edit Firearm Record' : 'Add New Firearm'}</h1>
+            <p className="page-header-desc">Record manufacturer markings, physical barrel specs, provenance & NFA compliance</p>
+          </div>
+        </div>
         <button
           type="button"
           className="btn-secondary"
@@ -259,260 +262,308 @@ export const FirearmForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="firearm-form">
-        <div className="form-grid">
-          <div className="form-group">
-            <label htmlFor="make">Make</label>
-            <input
-              id="make"
-              required
-              type="text"
-              name="make"
-              value={formData.make}
-              onChange={handleChange}
-              placeholder="e.g. Manufacturer / Arsenal"
-            />
+        {/* Card 1: Core Platform & Identification */}
+        <div className="form-section-card">
+          <div className="form-section-header">
+            <div className="form-section-title-wrap">
+              <RifleIcon size={18} color="var(--accent)" />
+              <h4 className="form-section-title">Core Platform & Identity</h4>
+            </div>
+            <span className="form-section-desc">Manufacturer, model designation, caliber & storage location</span>
           </div>
-          <div className="form-group">
-            <label htmlFor="model">Model</label>
-            <input
-              id="model"
-              required
-              type="text"
-              name="model"
-              value={formData.model}
-              onChange={handleChange}
-              placeholder="e.g. Model / Designation"
-            />
+
+          <div className="form-grid-3col">
+            <div className="form-group">
+              <label htmlFor="make">Make</label>
+              <input
+                id="make"
+                required
+                type="text"
+                name="make"
+                className="form-input"
+                value={formData.make}
+                onChange={handleChange}
+                placeholder="e.g. Colt, Sig Sauer, Smith & Wesson"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="model">Model</label>
+              <input
+                id="model"
+                required
+                type="text"
+                name="model"
+                className="form-input"
+                value={formData.model}
+                onChange={handleChange}
+                placeholder="e.g. M4A1, P320-M17, Model 29"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="serial_number">Serial Number</label>
+              <input
+                id="serial_number"
+                type="text"
+                name="serial_number"
+                className="form-input"
+                value={formData.serial_number}
+                onChange={handleChange}
+                placeholder="e.g. W123456"
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="serial_number">Serial Number</label>
-            <input
-              id="serial_number"
-              type="text"
-              name="serial_number"
-              value={formData.serial_number}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="caliber">Caliber</label>
-            <AutocompleteInput
-              id="caliber"
-              name="caliber"
-              value={formData.caliber || ''}
-              onChange={handleChange}
-              onBlur={(e) =>
-                setFormData((prev) => ({ ...prev, caliber: formatCaliber(e.target.value) }))
-              }
-              options={CALIBER_OPTIONS}
-              placeholder="e.g. 9mm Luger, .30-06 Springfield"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="firearm_type">Type</label>
-            <AutocompleteInput
-              id="firearm_type"
-              name="firearm_type"
-              value={formData.firearm_type || ''}
-              onChange={handleChange}
-              options={TYPE_OPTIONS}
-              placeholder="e.g. Rifle, C&R Rifle, Pistol"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="action_type">Action Type</label>
-            <AutocompleteInput
-              id="action_type"
-              name="action_type"
-              value={formData.action_type || ''}
-              onChange={handleChange}
-              options={ACTION_OPTIONS}
-              placeholder="e.g. Semi-Automatic, Bolt Action"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="finish">Finish</label>
-            <AutocompleteInput
-              id="finish"
-              name="finish"
-              value={formData.finish || ''}
-              onChange={handleChange}
-              options={FINISH_OPTIONS}
-              placeholder="e.g. Parkerized, Blued, Case Hardened"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="barrel_length">Barrel Length</label>
-            <input
-              id="barrel_length"
-              type="text"
-              name="barrel_length"
-              value={formData.barrel_length}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="purchase_date">Purchase Date</label>
-            <input
-              id="purchase_date"
-              type="date"
-              name="purchase_date"
-              value={formData.purchase_date}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="purchased_from">Purchased From (Optional)</label>
-            <input
-              id="purchased_from"
-              type="text"
-              name="purchased_from"
-              value={formData.purchased_from || ''}
-              onChange={handleChange}
-              placeholder="Name, Address, or FFL (e.g. CMP, GunBroker)"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="purchase_price">Purchase Price ($)</label>
-            <input
-              id="purchase_price"
-              type="number"
-              step="0.01"
-              name="purchase_price"
-              value={formData.purchase_price || ''}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="condition">Condition</label>
-            <AutocompleteInput
-              id="condition"
-              name="condition"
-              value={formData.condition || ''}
-              onChange={handleChange}
-              options={CONDITION_OPTIONS}
-              placeholder="e.g. NRA Fine, Excellent, CMP Service"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="storage_location">Storage Location / Safe</label>
-            <StorageLocationSelect
-              value={storageLocationId}
-              onChange={(locId) => setStorageLocationId(locId)}
-              locations={locations}
-              placeholder="Select Safe / Cabinet / Container..."
-            />
+
+          <div className="form-grid-4col">
+            <div className="form-group">
+              <label htmlFor="caliber">Caliber</label>
+              <AutocompleteInput
+                id="caliber"
+                name="caliber"
+                value={formData.caliber || ''}
+                onChange={handleChange}
+                onBlur={(e) =>
+                  setFormData((prev) => ({ ...prev, caliber: formatCaliber(e.target.value) }))
+                }
+                options={CALIBER_OPTIONS}
+                placeholder="e.g. 5.56x45mm NATO, 9mm"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="firearm_type">Type</label>
+              <AutocompleteInput
+                id="firearm_type"
+                name="firearm_type"
+                value={formData.firearm_type || ''}
+                onChange={handleChange}
+                options={TYPE_OPTIONS}
+                placeholder="e.g. Rifle, Handgun, Shotgun"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="action_type">Action Mechanism</label>
+              <AutocompleteInput
+                id="action_type"
+                name="action_type"
+                value={formData.action_type || ''}
+                onChange={handleChange}
+                options={ACTION_OPTIONS}
+                placeholder="e.g. Semi-Automatic, Bolt Action"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="storage_location">Storage Location</label>
+              <StorageLocationSelect
+                value={storageLocationId}
+                onChange={(locId) => setStorageLocationId(locId)}
+                locations={locations}
+                placeholder="Select Safe / Cabinet..."
+              />
+            </div>
           </div>
         </div>
 
-        <div
-          className="form-group full-width"
-          style={{
-            background: 'rgba(234, 179, 8, 0.05)',
-            padding: '1rem',
-            borderRadius: '8px',
-            border: '1px solid rgba(234, 179, 8, 0.2)',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              marginBottom: formData.is_nfa ? '1rem' : '0',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={formData.is_nfa || false}
-              onChange={(e) => setFormData({ ...formData, is_nfa: e.target.checked })}
-              style={{ width: 'auto' }}
-            />
-            <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>
-              NFA Regulated Item
-            </span>
-          </label>
+        {/* Card 2: Physical Specifications & Condition */}
+        <div className="form-section-card">
+          <div className="form-section-header">
+            <div className="form-section-title-wrap">
+              <Package size={18} className="text-accent" />
+              <h4 className="form-section-title">Physical Specifications & Grading</h4>
+            </div>
+            <span className="form-section-desc">Barrel length, metal finish & cosmetic grading</span>
+          </div>
+
+          <div className="form-grid-3col">
+            <div className="form-group">
+              <label htmlFor="barrel_length">Barrel Length</label>
+              <input
+                id="barrel_length"
+                type="text"
+                name="barrel_length"
+                className="form-input"
+                value={formData.barrel_length}
+                onChange={handleChange}
+                placeholder='e.g. 16.0", 4.25", 20"'
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="finish">Finish / Coating</label>
+              <AutocompleteInput
+                id="finish"
+                name="finish"
+                value={formData.finish || ''}
+                onChange={handleChange}
+                options={FINISH_OPTIONS}
+                placeholder="e.g. Black Nitride, Parkerized, Cerakote"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="condition">Condition</label>
+              <AutocompleteInput
+                id="condition"
+                name="condition"
+                value={formData.condition || ''}
+                onChange={handleChange}
+                options={CONDITION_OPTIONS}
+                placeholder="e.g. Excellent (98%+), NRA Fine, New"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Acquisition & Provenance */}
+        <div className="form-section-card">
+          <div className="form-section-header">
+            <div className="form-section-title-wrap">
+              <DollarSign size={18} className="text-accent" />
+              <h4 className="form-section-title">Acquisition & Valuation</h4>
+            </div>
+            <span className="form-section-desc">Purchase source, acquisition date & financial basis</span>
+          </div>
+
+          <div className="form-grid-3col">
+            <div className="form-group">
+              <label htmlFor="purchase_date">Acquisition Date</label>
+              <input
+                id="purchase_date"
+                type="date"
+                name="purchase_date"
+                className="form-input"
+                value={formData.purchase_date}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="purchased_from">Purchased From / Transferor FFL</label>
+              <input
+                id="purchased_from"
+                type="text"
+                name="purchased_from"
+                className="form-input"
+                value={formData.purchased_from || ''}
+                onChange={handleChange}
+                placeholder="Dealer Name, CMP, GunBroker, Private"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="purchase_price">Purchase Price ($)</label>
+              <input
+                id="purchase_price"
+                type="number"
+                step="0.01"
+                min="0"
+                name="purchase_price"
+                className="form-input"
+                value={formData.purchase_price || ''}
+                onChange={handleChange}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: ATF & NFA Compliance */}
+        <div className="form-section-card">
+          <div className="form-section-header">
+            <div className="form-section-title-wrap">
+              <Shield size={18} className="text-warning" />
+              <h4 className="form-section-title">NFA ATF Compliance</h4>
+            </div>
+            <label className="form-checkbox-row">
+              <input
+                type="checkbox"
+                checked={formData.is_nfa || false}
+                onChange={(e) => setFormData((prev) => ({ ...prev, is_nfa: e.target.checked }))}
+              />
+              <span>Regulated NFA Item</span>
+            </label>
+          </div>
+
           {formData.is_nfa && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1rem',
-              }}
-            >
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>NFA Type</label>
+            <div className="form-grid-3col">
+              <div className="form-group">
+                <label>NFA Classification</label>
                 <AutocompleteInput
                   mode="select"
                   name="nfa_type"
                   value={formData.nfa_type || ''}
-                  onChange={(e) => setFormData({ ...formData, nfa_type: e.target.value as any })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, nfa_type: e.target.value as any }))}
                   options={[
-                    { value: '', label: 'Select Type...' },
+                    { value: '', label: 'Select Classification...' },
                     { value: 'SBR', label: 'Short Barreled Rifle (SBR)' },
                     { value: 'SBS', label: 'Short Barreled Shotgun (SBS)' },
-                    { value: 'Suppressor', label: 'Suppressor' },
+                    { value: 'Suppressor', label: 'Silencer / Suppressor' },
                     { value: 'Machine Gun', label: 'Machine Gun' },
                     { value: 'AOW', label: 'Any Other Weapon (AOW)' },
                     { value: 'Destructive Device', label: 'Destructive Device' },
                   ]}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Registration Type</label>
+
+              <div className="form-group">
+                <label>Registration Entity</label>
                 <AutocompleteInput
                   mode="select"
                   name="registration_type"
                   value={formData.registration_type || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, registration_type: e.target.value as any })
+                    setFormData((prev) => ({ ...prev, registration_type: e.target.value as any }))
                   }
                   options={[
-                    { value: '', label: 'Select Type...' },
-                    { value: 'Individual', label: 'Individual' },
-                    { value: 'Trust', label: 'Trust' },
-                    { value: 'Corporation', label: 'Corporation' },
+                    { value: '', label: 'Select Entity...' },
+                    { value: 'Individual', label: 'Individual (Form 1 / 4)' },
+                    { value: 'Trust', label: 'Gun Trust' },
+                    { value: 'Corporation', label: 'Corporation / LLC' },
                   ]}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Stamp Status</label>
+
+              <div className="form-group">
+                <label>Tax Stamp Status</label>
                 <AutocompleteInput
                   mode="select"
                   name="stamp_status"
                   value={formData.stamp_status || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, stamp_status: e.target.value as any })
+                    setFormData((prev) => ({ ...prev, stamp_status: e.target.value as any }))
                   }
                   options={[
                     { value: '', label: 'Select Status...' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Approved', label: 'Approved' },
+                    { value: 'Pending', label: 'Pending ATF Processing' },
+                    { value: 'Approved', label: 'Approved Stamp Issued' },
                   ]}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Date Submitted</label>
+
+              <div className="form-group">
+                <label>Date Submitted to ATF</label>
                 <input
                   type="date"
                   className="form-input"
                   value={formData.stamp_submitted_date || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, stamp_submitted_date: e.target.value })
+                    setFormData((prev) => ({ ...prev, stamp_submitted_date: e.target.value }))
                   }
                 />
               </div>
+
               {formData.stamp_status === 'Approved' && (
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Date Approved</label>
+                <div className="form-group">
+                  <label>Date Stamp Approved</label>
                   <input
                     type="date"
                     className="form-input"
                     value={formData.stamp_approved_date || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, stamp_approved_date: e.target.value })
+                      setFormData((prev) => ({ ...prev, stamp_approved_date: e.target.value }))
                     }
                   />
                 </div>
@@ -520,159 +571,105 @@ export const FirearmForm = () => {
             </div>
           )}
         </div>
-        <div className="form-group full-width">
-          <label
-            style={{
-              fontSize: '1.1rem',
-              marginBottom: '1rem',
-              display: 'block',
-              color: 'var(--text)',
-            }}
-          >
-            Photos Gallery
-          </label>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-              gap: '1.25rem',
-              marginBottom: '1rem',
-            }}
-          >
-            {previews.map((p, idx) => (
-              <div
-                key={idx}
-                className="premium-photo-card"
-                style={{ position: 'relative', width: '100%', paddingBottom: '100%' }}
-              >
-                <img
-                  src={p.url}
-                  alt="Preview"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-                <button
-                  type="button"
-                  className="premium-photo-delete"
-                  onClick={() => removePhoto(idx)}
-                  style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    border: 'none',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 10,
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-            <div
-              role="button"
-              tabIndex={0}
-              className="photo-placeholder premium-add-photo"
-              style={{
-                margin: 0,
-                width: '100%',
-                paddingBottom: '100%',
-                position: 'relative',
-                cursor: 'pointer',
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                handlePhotoSelectNative();
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Upload size={28} style={{ marginBottom: '0.75rem' }} />
-                <span style={{ fontSize: '0.85rem', fontWeight: 500, textAlign: 'center' }}>
-                  Add Photo
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div
-          className="form-group full-width"
-          style={{
-            background: 'rgba(59, 130, 246, 0.05)',
-            padding: '1rem',
-            borderRadius: '8px',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <h4 style={{ margin: '0 0 1rem 0', color: 'var(--accent)' }}>Maintenance Alerts</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Clean Every (Rounds)</label>
+        {/* Card 5: Maintenance & Photo Gallery */}
+        <div className="form-section-card">
+          <div className="form-section-header">
+            <div className="form-section-title-wrap">
+              <Wrench size={18} className="text-accent" />
+              <h4 className="form-section-title">Armorer Log & Maintenance Schedules</h4>
+            </div>
+            <span className="form-section-desc">Automatic service alerts based on round count or elapsed days</span>
+          </div>
+
+          <div className="form-grid-2col">
+            <div className="form-group">
+              <label>Service Interval (Rounds Fired)</label>
               <input
                 type="number"
+                min="0"
                 className="form-input"
-                placeholder="e.g. 500"
+                placeholder="e.g. 500 rounds"
                 value={formData.maintenance_round_threshold || ''}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
+                  setFormData((prev) => ({
+                    ...prev,
                     maintenance_round_threshold: e.target.value
                       ? parseInt(e.target.value, 10)
                       : undefined,
-                  })
+                  }))
                 }
               />
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Clean Every (Days)</label>
+
+            <div className="form-group">
+              <label>Service Interval (Elapsed Days)</label>
               <input
                 type="number"
+                min="0"
                 className="form-input"
-                placeholder="e.g. 90"
+                placeholder="e.g. 90 days"
                 value={formData.maintenance_date_threshold_days || ''}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
+                  setFormData((prev) => ({
+                    ...prev,
                     maintenance_date_threshold_days: e.target.value
                       ? parseInt(e.target.value, 10)
                       : undefined,
-                  })
+                  }))
                 }
               />
             </div>
           </div>
+
+          <div className="form-group">
+            <label>Firearm History / Notes / Features</label>
+            <textarea
+              name="notes"
+              className="form-input"
+              rows={3}
+              value={formData.notes || ''}
+              onChange={handleChange}
+              placeholder="Markings, factory box, included magazines, trigger pull weight..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Photo Gallery</label>
+            <div className="photo-grid-tray">
+              {previews.map((p, idx) => (
+                <div key={idx} className="photo-card-item">
+                  <img src={p.url} alt="Firearm Preview" className="photo-card-img" />
+                  <button
+                    type="button"
+                    className="photo-card-delete"
+                    onClick={() => removePhoto(idx)}
+                    title="Remove photo"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+
+              <div
+                role="button"
+                tabIndex={0}
+                className="photo-card-upload-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handlePhotoSelectNative();
+                }}
+              >
+                <div className="photo-card-upload-content">
+                  <Upload size={24} />
+                  <span>Add Photo</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="form-group full-width">
-          <label>Notes / Accessories</label>
-          <textarea name="notes" rows={4} value={formData.notes} onChange={handleChange}></textarea>
-        </div>
-
+        {/* Submit Bar */}
         <div className="form-actions">
           <button type="submit" className="btn-primary">
             <Save size={18} /> {id ? 'Update Firearm' : 'Save Firearm'}

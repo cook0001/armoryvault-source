@@ -18,6 +18,8 @@ describe('SyncInbox Range Session & Telemetry Pipeline', () => {
       location: 'Eagle Eye Precision Shooting Complex',
       cost: 20,
       notes: 'Precision zero verification',
+      optic_name: 'Vortex Razor HD Gen III 1-10x',
+      malfunctions: [{ type: 'FTF', count: 1 }],
       timestamp: Date.now(),
       group_metrics: {
         moa: 0.68,
@@ -70,7 +72,7 @@ describe('SyncInbox Range Session & Telemetry Pipeline', () => {
     };
   });
 
-  it('renders range session card with MOA group telemetry badge', async () => {
+  it('renders range session card with MOA group, chrono telemetry, facility, optic, and stoppage badges', async () => {
     render(
       <MemoryRouter>
         <ModuleProvider>
@@ -82,7 +84,12 @@ describe('SyncInbox Range Session & Telemetry Pipeline', () => {
     expect(await screen.findByText('Range Trip Session')).toBeInTheDocument();
     expect(screen.getByText(/Tikka T3x Tac A1/i)).toBeInTheDocument();
     expect(screen.getByText(/50 rounds/i)).toBeInTheDocument();
+    expect(screen.getByText(/Facility: Eagle Eye Precision Shooting Complex/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lane Fee: \$20/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mounted Optic: Vortex Razor HD Gen III 1-10x/i)).toBeInTheDocument();
     expect(screen.getByText(/0.68 MOA Group/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chrono: 2650 fps Avg/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stoppages: 1x FTF/i)).toBeInTheDocument();
   });
 
   it('approves range session, updating round counts and persisting target analysis and chrono telemetry', async () => {

@@ -4,13 +4,16 @@ import {
   CheckCircle,
   DollarSign,
   FileText,
+  Hammer,
+  ShieldCheck,
+  Sparkles,
   Tag,
   Wrench,
   X,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Firearm, MaintenanceScheduleItem } from '@/types';
+import type { Firearm, MaintenanceLog, MaintenanceScheduleItem } from '@/types';
 
 interface QuickServiceModalProps {
   isOpen: boolean;
@@ -116,11 +119,11 @@ export const QuickServiceModal: React.FC<QuickServiceModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFirearmId) {
-      setError('Please select a firearm.');
+      setError('Please select a target firearm.');
       return;
     }
     if (!taskName.trim()) {
-      setError('Please specify a task or service action.');
+      setError('Please enter or select a procedure name.');
       return;
     }
 
@@ -128,382 +131,268 @@ export const QuickServiceModal: React.FC<QuickServiceModalProps> = ({
     setError(null);
 
     try {
-      const parsedCost = cost.trim() ? Number.parseFloat(cost) : 0;
-      const logData = {
-        action_performed: actionDetails.trim() || taskName,
-        part_details: actionDetails.trim() || taskName,
-        cost: Number.isNaN(parsedCost) ? 0 : parsedCost,
+      const targetFirearm = firearms.find((f) => f.id === Number(selectedFirearmId));
+      if (!targetFirearm) {
+        throw new Error('Firearm record not found.');
+      }
+
+      const logEntry: MaintenanceLog = {
+        id: Date.now(),
         date,
-        notes: notes.trim(),
+        type: serviceType,
+        installed_part_details: actionDetails ? `${taskName}: ${actionDetails}` : taskName,
+        cost: cost ? parseFloat(cost) : undefined,
+        notes,
       };
 
-      if (window.api) {
-        if (selectedTaskId && window.api.completeMaintenanceTask) {
-          // Scheduled task completion
-          await window.api.completeMaintenanceTask(
-            Number(selectedFirearmId),
-            selectedTaskId,
-            logData
-          );
-        } else {
-          // Ad-hoc service log append
-          const allFirearms = await window.api.getFirearms();
-          const target = allFirearms.find((f) => f.id === Number(selectedFirearmId));
-          if (target) {
-            const currentLogs = target.logs || [];
-            const newLogId =
-              currentLogs.length > 0 ? Math.max(...currentLogs.map((l) => l.id || 0)) + 1 : 1;
-            const newLog = {
-              id: newLogId,
-              date,
-              type: serviceType,
-              repaired_part: taskName,
-              installed_part_details: actionDetails.trim(),
-              cost: Number.isNaN(parsedCost) ? 0 : parsedCost,
-              notes: notes.trim(),
-            };
-            target.logs = [...currentLogs, newLog];
-            await window.api.updateFirearm(target.id!, target);
-          }
-        }
+      const updatedLogs = [...(targetFirearm.logs || []), logEntry];
+      let updatedSchedules = targetFirearm.maintenance_schedules || [];
 
-        window.dispatchEvent(new CustomEvent('armoryvault-reload'));
+      if (selectedTaskId) {
+        const currentRoundCount = targetFirearm.round_count || 0;
+        updatedSchedules = updatedSchedules.map((s) => {
+          if (s.id === selectedTaskId) {
+            return {
+              ...s,
+              last_performed_rounds: currentRoundCount,
+              last_performed_date: date,
+            };
+          }
+          return s;
+        });
+      }
+
+      const updatedFirearm: Firearm = {
+        ...targetFirearm,
+        logs: updatedLogs,
+        maintenance_schedules: updatedSchedules,
+      };
+
+      if (selectedTaskId && window.api && window.api.completeMaintenanceTask) {
+        await window.api.completeMaintenanceTask(targetFirearm.id!, selectedTaskId, {
+          date,
+          type: serviceType,
+          action_performed: actionDetails || taskName,
+          part_details: actionDetails,
+          notes,
+          cost: cost ? parseFloat(cost) : undefined,
+        });
+      } else if (window.api && window.api.updateFirearm) {
+        await window.api.updateFirearm(targetFirearm.id!, updatedFirearm);
       }
 
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Failed to log maintenance service:', err);
-      setError(err?.message || 'Failed to record maintenance service.');
+      console.error('Failed to log service:', err);
+      setError(err?.message || 'Failed to save service entry.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const serviceCategories: Array<{
+    type: 'Cleaning' | 'Repair' | 'Modification' | 'Other';
+    label: string;
+    icon: React.ReactNode;
+  }> = [
+    { type: 'Cleaning', label: 'Clean & Lube', icon: <Sparkles size={16} /> },
+    { type: 'Repair', label: 'Repair / Parts', icon: <Wrench size={16} /> },
+    { type: 'Modification', label: 'Upgrade / Mod', icon: <Hammer size={16} /> },
+    { type: 'Other', label: 'Armorer Inspection', icon: <ShieldCheck size={16} /> },
+  ];
+
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
-        style={{ maxWidth: '600px', width: '100%' }}
+        className="modal-container"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="modal-header"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid var(--border-light)',
-            paddingBottom: '0.75rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(59, 130, 246, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#3b82f6',
-              }}
-            >
-              <Wrench size={20} />
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                Log Armorer Service
-              </h2>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '0.8rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Record scheduled maintenance, part replacements, or cleanings
-              </p>
+        <div className="modal-header">
+          <div className="modal-header-title">
+            <Wrench size={22} className="text-accent" />
+            <div className="modal-header-text">
+              <h2>Log Armorer Service</h2>
+              <p>Record maintenance actions, parts replacements & complete schedules</p>
             </div>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">
-            <X size={20} />
+          <button type="button" className="btn-icon" onClick={onClose} title="Close dialog">
+            <X size={18} />
           </button>
         </div>
 
         {error && (
-          <div
-            style={{
-              padding: '0.75rem',
-              marginBottom: '1rem',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.85rem',
-            }}
-          >
+          <div className="notification-banner notification-banner-danger mx-6 mt-4">
             <AlertTriangle size={16} />
             <span>{error}</span>
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-        >
-          {/* Firearm Selector */}
-          <div>
-            <label
-              htmlFor="quick-service-firearm"
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-              }}
-            >
-              Target Firearm *
-            </label>
-            <select
-              id="quick-service-firearm"
-              className="form-input"
-              value={selectedFirearmId}
-              onChange={(e) => handleFirearmChange(Number(e.target.value))}
-              required
-            >
-              <option value="" disabled>
-                Select a firearm...
-              </option>
-              {firearms.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.make} {f.model} ({f.caliber}) — SN: {f.serial_number || 'N/A'}
-                </option>
-              ))}
-            </select>
-          </div>
+        <form onSubmit={handleSubmit} className="modal-body">
+          {/* Target Firearm & Procedure Card */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Wrench size={16} className="text-accent" />
+                <h4 className="form-section-title">Firearm &amp; Procedure Selection</h4>
+              </div>
+            </div>
 
-          {/* Task / Service Action */}
-          <div>
-            <label
-              htmlFor="quick-service-task"
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-              }}
-            >
-              Task / Maintenance Item *
-            </label>
-            <select
-              id="quick-service-task"
-              className="form-input"
-              value={selectedTaskId ? `sched:${selectedTaskId}` : taskName}
-              onChange={(e) => handleTaskSelection(e.target.value)}
-              required
-            >
-              {schedules.length > 0 && (
-                <optgroup label="Firearm Scheduled Intervals">
-                  {schedules.map((s) => (
-                    <option key={s.id} value={`sched:${s.id}`}>
-                      {s.task_name} (Every {s.interval_rounds.toLocaleString()} rds
-                      {s.interval_days ? ` / ${s.interval_days} days` : ''})
+            <div className="form-grid-2col">
+              <div className="form-group">
+                <label htmlFor="quick-service-firearm">Target Firearm *</label>
+                <select
+                  id="quick-service-firearm"
+                  className="form-input"
+                  value={selectedFirearmId}
+                  onChange={(e) => handleFirearmChange(Number(e.target.value))}
+                  required
+                >
+                  <option value="" disabled>
+                    Select a firearm...
+                  </option>
+                  {firearms.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.make} {f.model} ({f.caliber}) — SN: {f.serial_number || 'N/A'}
                     </option>
                   ))}
-                </optgroup>
-              )}
-              <optgroup label="Standard Armorer & Cleaning Procedures">
-                {COMMON_TASKS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
+                </select>
+              </div>
 
-          {/* Custom Task Name if not matched */}
-          {!selectedTaskId && (
-            <div>
-              <label
-                htmlFor="quick-service-custom-task"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Procedure Title / Description
-              </label>
-              <input
-                id="quick-service-custom-task"
-                type="text"
-                className="form-input"
-                placeholder="e.g. Polished feed ramp, replaced ejector"
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                required
-              />
+              <div className="form-group">
+                <label htmlFor="quick-service-task">Maintenance Task / Schedule *</label>
+                <select
+                  id="quick-service-task"
+                  className="form-input"
+                  value={selectedTaskId ? `sched:${selectedTaskId}` : taskName}
+                  onChange={(e) => handleTaskSelection(e.target.value)}
+                  required
+                >
+                  {schedules.length > 0 && (
+                    <optgroup label="Firearm Scheduled Intervals">
+                      {schedules.map((s) => (
+                        <option key={s.id} value={`sched:${s.id}`}>
+                          {s.task_name} (Every {s.interval_rounds.toLocaleString()} rds
+                          {s.interval_days ? ` / ${s.interval_days} days` : ''})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Standard Armorer & Cleaning Procedures">
+                    {COMMON_TASKS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
             </div>
-          )}
 
-          {/* Service Type & Date */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label
-                htmlFor="quick-service-type"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Service Category
-              </label>
-              <select
-                id="quick-service-type"
-                className="form-input"
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value as any)}
-              >
-                <option value="Cleaning">Cleaning / Lubrication</option>
-                <option value="Repair">Repair / Part Replacement</option>
-                <option value="Modification">Modification / Upgrade</option>
-                <option value="Other">Inspection / Armorer Check</option>
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="quick-service-date"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                <Calendar
-                  size={14}
-                  style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
+            {!selectedTaskId && (
+              <div className="form-group">
+                <label htmlFor="quick-service-custom-task">Custom Procedure Title</label>
+                <input
+                  id="quick-service-custom-task"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Polished feed ramp, replaced gas rings"
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  required
                 />
-                Service Date
-              </label>
-              <input
-                id="quick-service-date"
-                type="date"
-                className="form-input"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
+              </div>
+            )}
+          </div>
+
+          {/* Service Category Selector Card */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Tag size={16} className="text-accent" />
+                <h4 className="form-section-title">Service Classification</h4>
+              </div>
+            </div>
+
+            <div className="form-type-selector">
+              {serviceCategories.map((cat) => (
+                <button
+                  key={cat.type}
+                  type="button"
+                  className={`form-type-btn ${serviceType === cat.type ? 'active' : ''}`}
+                  onClick={() => setServiceType(cat.type)}
+                >
+                  {cat.icon}
+                  <span>{cat.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Installed Part Details & Cost */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-            <div>
-              <label
-                htmlFor="quick-service-parts"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                <Tag
-                  size={14}
-                  style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
+          {/* Execution Details & Financials */}
+          <div className="form-section-card">
+            <div className="form-section-header">
+              <div className="form-section-title-wrap">
+                <Calendar size={16} className="text-accent" />
+                <h4 className="form-section-title">Service Details &amp; Parts Cost</h4>
+              </div>
+            </div>
+
+            <div className="form-grid-3col">
+              <div className="form-group">
+                <label htmlFor="quick-service-date">Date Completed *</label>
+                <input
+                  id="quick-service-date"
+                  type="date"
+                  className="form-input"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
                 />
-                Installed Parts / Replaced Details
-              </label>
-              <input
-                id="quick-service-parts"
-                type="text"
-                className="form-input"
-                placeholder="e.g. OEM Glock 18lb recoil spring"
-                value={actionDetails}
-                onChange={(e) => setActionDetails(e.target.value)}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="quick-service-cost"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                <DollarSign
-                  size={14}
-                  style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="quick-service-parts">Installed Parts / Replaced Details</label>
+                <input
+                  id="quick-service-parts"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. OEM Glock 18lb recoil spring"
+                  value={actionDetails}
+                  onChange={(e) => setActionDetails(e.target.value)}
                 />
-                Cost ($) (Optional)
-              </label>
-              <input
-                id="quick-service-cost"
-                type="number"
-                step="0.01"
-                min="0"
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="quick-service-cost">Cost ($) (Optional)</label>
+                <input
+                  id="quick-service-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="form-input"
+                  placeholder="0.00"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="quick-service-notes">Armorer Notes &amp; Observations</label>
+              <textarea
+                id="quick-service-notes"
                 className="form-input"
-                placeholder="0.00"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
+                rows={2}
+                placeholder="Bore scoped clean, headspace verified with go-gauge, function test passed..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label
-              htmlFor="quick-service-notes"
-              style={{
-                display: 'block',
-                marginBottom: '0.4rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <FileText
-                size={14}
-                style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'middle' }}
-              />
-              Armorer Notes / Observations
-            </label>
-            <textarea
-              id="quick-service-notes"
-              className="form-input"
-              rows={2}
-              placeholder="e.g. Bore scoped clean, bolt lugs checked with no cracks, function tested 100%"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          {/* Actions */}
-          <div
-            className="modal-actions"
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              marginTop: '0.5rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--border-light)',
-            }}
-          >
+          {/* Modal Footer */}
+          <div className="modal-footer">
             <button
               type="button"
               className="btn-secondary"
@@ -516,7 +405,6 @@ export const QuickServiceModal: React.FC<QuickServiceModalProps> = ({
               type="submit"
               className="btn-primary"
               disabled={isSubmitting}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
               <CheckCircle size={16} />
               {isSubmitting ? 'Recording...' : 'Record Service & Complete'}

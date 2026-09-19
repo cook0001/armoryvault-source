@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection, Result};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub struct InventoryStore;
 
@@ -13,11 +13,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -82,11 +80,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -148,11 +144,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -212,11 +206,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -277,10 +269,8 @@ impl InventoryStore {
         })?;
 
         let mut map = serde_json::Map::new();
-        for r in rows {
-            if let Ok((id, val)) = r {
-                map.insert(id, val);
-            }
+        for (id, val) in rows.flatten() {
+            map.insert(id, val);
         }
         Ok(map)
     }
@@ -309,11 +299,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -383,11 +371,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -423,11 +409,9 @@ impl InventoryStore {
         })?;
 
         let mut list = Vec::new();
-        for r in rows {
-            if let Ok(val) = r {
-                if !val.is_null() {
-                    list.push(val);
-                }
+        for val in rows.flatten() {
+            if !val.is_null() {
+                list.push(val);
             }
         }
         Ok(list)
@@ -438,9 +422,241 @@ impl InventoryStore {
         Ok(id.to_string())
     }
 
+    pub fn reject_sync_item(conn: &Connection, id: &str, delete_from_mobile: bool) -> Result<()> {
+        if delete_from_mobile {
+            let mut stmt = conn.prepare("SELECT payload FROM sync_queue WHERE id = ?1")?;
+            let payload_str: Option<String> = stmt.query_row(params![id], |r| r.get(0)).ok();
+            if let Some(p_str) = payload_str {
+                let parsed: Value = serde_json::from_str(&p_str).unwrap_or(Value::Null);
+                let item_type = parsed.get("type").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let filename = parsed
+                    .get("custom_payload_filename")
+                    .or_else(|| parsed.get("filename"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let item_identifier = parsed
+                    .get("firearmId")
+                    .or_else(|| parsed.get("id"))
+                    .or_else(|| parsed.get("upcOrId"))
+                    .or_else(|| parsed.get("sessionId"))
+                    .map(|v| v.to_string())
+                    .or_else(|| {
+                        parsed.get("data").and_then(|d| {
+                            d.get("serial_number")
+                                .or_else(|| d.get("id"))
+                                .or_else(|| d.get("firearmId"))
+                                .map(|v| v.to_string())
+                        })
+                    })
+                    .unwrap_or_default();
+
+                let tombstone_id = hex::encode(rand::random::<[u8; 8]>());
+                let now = chrono::Utc::now().timestamp_millis();
+                conn.execute(
+                    "INSERT INTO rejected_syncs (id, sync_id, item_type, filename, item_identifier, payload, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    params![tombstone_id, id, item_type, filename, item_identifier, p_str, now],
+                )?;
+            }
+        }
+        conn.execute("DELETE FROM sync_queue WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn get_rejected_syncs(conn: &Connection) -> Result<Vec<Value>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, sync_id, item_type, filename, item_identifier, created_at FROM rejected_syncs ORDER BY created_at ASC"
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let id: String = row.get(0)?;
+            let sync_id: String = row.get(1)?;
+            let item_type: String = row.get(2)?;
+            let filename: String = row.get(3)?;
+            let item_identifier: String = row.get(4)?;
+            let created_at: i64 = row.get(5)?;
+            Ok(json!({
+                "id": id,
+                "syncId": sync_id,
+                "itemType": item_type,
+                "filename": filename,
+                "itemIdentifier": item_identifier,
+                "createdAt": created_at
+            }))
+        })?;
+        let mut list = Vec::new();
+        for r in rows.flatten() {
+            list.push(r);
+        }
+        Ok(list)
+    }
+
+    pub fn confirm_rejected_syncs(conn: &Connection, ids: &[String]) -> Result<()> {
+        for id in ids {
+            conn.execute("DELETE FROM rejected_syncs WHERE id = ?1", params![id])?;
+        }
+        Ok(())
+    }
+
     pub fn clear_sync_queue(conn: &Connection) -> Result<()> {
         conn.execute("DELETE FROM sync_queue", [])?;
         Ok(())
+    }
+
+    // ─── Paired Companion Devices ─────────────────────────────────────────
+    pub fn upsert_paired_device(
+        conn: &Connection,
+        id: &str,
+        device_name: &str,
+        device_type: &str,
+        ip_address: &str,
+        device_token: Option<&str>,
+        device_key: Option<&str>,
+    ) -> Result<bool> {
+        let is_already_paired: bool = conn
+            .query_row(
+                "SELECT 1 FROM paired_devices WHERE id = ?1 AND is_active = 1",
+                params![id],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO paired_devices (id, device_name, device_type, ip_address, paired_at, last_active_at, is_active, device_token, device_key)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8)
+             ON CONFLICT(id) DO UPDATE SET
+                device_name = excluded.device_name,
+                device_type = excluded.device_type,
+                ip_address = excluded.ip_address,
+                last_active_at = excluded.last_active_at,
+                is_active = 1,
+                device_token = COALESCE(excluded.device_token, paired_devices.device_token),
+                device_key = COALESCE(excluded.device_key, paired_devices.device_key)",
+            params![id, device_name, device_type, ip_address, now, now, device_token, device_key],
+        )?;
+        Ok(!is_already_paired)
+    }
+
+    pub fn update_paired_device_activity(
+        conn: &Connection,
+        id: &str,
+        ip_address: Option<&str>,
+    ) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+        if let Some(ip) = ip_address {
+            conn.execute(
+                "UPDATE paired_devices SET last_active_at = ?1, ip_address = ?2 WHERE id = ?3",
+                params![now, ip, id],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE paired_devices SET last_active_at = ?1 WHERE id = ?2",
+                params![now, id],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn get_paired_devices(conn: &Connection) -> Result<Vec<Value>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, device_name, device_type, ip_address, paired_at, last_active_at, is_active, device_token, device_key
+             FROM paired_devices WHERE is_active = 1 ORDER BY last_active_at DESC"
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let id: String = row.get(0)?;
+            let device_name: String = row.get(1)?;
+            let device_type: String = row.get(2)?;
+            let ip_address: Option<String> = row.get(3)?;
+            let paired_at: String = row.get(4)?;
+            let last_active_at: String = row.get(5)?;
+            let is_active: i64 = row.get(6)?;
+            let device_token: Option<String> = row.get(7)?;
+            let device_key: Option<String> = row.get(8)?;
+            Ok(json!({
+                "id": id,
+                "deviceName": device_name,
+                "deviceType": device_type,
+                "ipAddress": ip_address.unwrap_or_default(),
+                "pairedAt": paired_at,
+                "lastActiveAt": last_active_at,
+                "isActive": is_active == 1,
+                "deviceToken": device_token.unwrap_or_default(),
+                "deviceKey": device_key.unwrap_or_default(),
+            }))
+        })?;
+        let mut list = Vec::new();
+        for r in rows.flatten() {
+            list.push(r);
+        }
+        Ok(list)
+    }
+
+    pub fn get_paired_device_keys(conn: &Connection) -> Result<Vec<String>> {
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT device_key FROM paired_devices WHERE is_active = 1 AND device_key IS NOT NULL AND device_key != ''"
+        )?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+        let mut keys = Vec::new();
+        for k in rows.flatten() {
+            if !k.trim().is_empty() {
+                keys.push(k);
+            }
+        }
+        Ok(keys)
+    }
+
+    pub fn get_kv_meta_map(conn: &Connection) -> Result<serde_json::Map<String, Value>> {
+        let mut stmt = conn.prepare("SELECT key, value FROM kv_meta")?;
+        let rows = stmt.query_map([], |row| {
+            let k: String = row.get(0)?;
+            let v: String = row.get(1)?;
+            Ok((k, v))
+        })?;
+        let mut map = serde_json::Map::new();
+        for r in rows.flatten() {
+            map.insert(r.0, Value::String(r.1));
+        }
+        Ok(map)
+    }
+
+    pub fn get_or_create_vault_token(conn: &Connection) -> Result<String> {
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT value FROM kv_meta WHERE key = 'vault_pairing_token'",
+                [],
+                |r| r.get(0),
+            )
+            .ok();
+
+        if let Some(t) = existing {
+            if !t.trim().is_empty() {
+                return Ok(t);
+            }
+        }
+
+        let new_token = hex::encode(rand::random::<[u8; 16]>());
+        conn.execute(
+            "INSERT OR REPLACE INTO kv_meta (key, value) VALUES ('vault_pairing_token', ?1)",
+            params![new_token],
+        )?;
+        Ok(new_token)
+    }
+
+    pub fn set_vault_pairing_token(conn: &Connection, token: &str) -> Result<()> {
+        conn.execute(
+            "INSERT OR REPLACE INTO kv_meta (key, value) VALUES ('vault_pairing_token', ?1)",
+            params![token],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_paired_device(conn: &Connection, id: &str) -> Result<bool> {
+        let count = conn.execute("DELETE FROM paired_devices WHERE id = ?1", params![id])?;
+        Ok(count > 0)
+    }
+
+    pub fn unpair_all_devices(conn: &Connection) -> Result<bool> {
+        conn.execute("DELETE FROM paired_devices", [])?;
+        Ok(true)
     }
 
     // ─── Maintenance & Range Telemetry ────────────────────────────────────
@@ -1172,14 +1388,119 @@ impl InventoryStore {
             "newAmmoCount": new_ammo_count,
         }))
     }
+
+    // ─── Export & Serialization for Encrypted Rest Persistence ───────────
+    pub fn export_vault_json(conn: &Connection) -> Result<String, String> {
+        let firearms = Self::get_firearms(conn).map_err(|e| e.to_string())?;
+        let ammo = Self::get_ammo(conn).map_err(|e| e.to_string())?;
+        let accessories = Self::get_accessories(conn).map_err(|e| e.to_string())?;
+        let storage_locations = Self::get_storage_locations(conn).map_err(|e| e.to_string())?;
+        let components = Self::get_components(conn).map_err(|e| e.to_string())?;
+        let kv_meta = Self::get_kv_meta_map(conn).unwrap_or_default();
+        let paired_devices = Self::get_paired_devices(conn).unwrap_or_default();
+        let sync_queue = Self::get_sync_queue(conn).unwrap_or_default();
+
+        let root = serde_json::json!({
+            "schemaVersion": 2,
+            "_lastModified": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            "firearms": firearms,
+            "ammo": ammo,
+            "accessories": accessories,
+            "storage_locations": storage_locations,
+            "components": components,
+            "kv_meta": kv_meta,
+            "paired_devices": paired_devices,
+            "sync_queue": sync_queue,
+        });
+
+        serde_json::to_string_pretty(&root).map_err(|e| e.to_string())
+    }
+
+    pub fn get_all_activity_logs_for_export(conn: &Connection) -> Result<Vec<Value>> {
+        let mut stmt = conn.prepare("SELECT data FROM activity_log ORDER BY id ASC LIMIT 1000")?;
+        let rows = stmt.query_map([], |row| {
+            let data_str: String = row.get(0)?;
+            Ok(serde_json::from_str(&data_str).unwrap_or(Value::Null))
+        })?;
+
+        let mut list = Vec::new();
+        for r in rows.flatten() {
+            if !r.is_null() {
+                list.push(r);
+            }
+        }
+        Ok(list)
+    }
+
+    pub fn export_activity_log_json(conn: &Connection) -> Result<String, String> {
+        let logs = Self::get_all_activity_logs_for_export(conn).map_err(|e| e.to_string())?;
+        let root = serde_json::json!({
+            "schemaVersion": 1,
+            "activity_log": logs,
+            "lastModified": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+        });
+        serde_json::to_string_pretty(&root).map_err(|e| e.to_string())
+    }
+
+    pub fn export_skus_json(conn: &Connection) -> Result<String, String> {
+        let skus = Self::get_skus(conn).map_err(|e| e.to_string())?;
+        let root = serde_json::json!({
+            "schemaVersion": 1,
+            "skus": skus,
+            "lastModified": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+        });
+        serde_json::to_string_pretty(&root).map_err(|e| e.to_string())
+    }
+
+    pub fn get_custom_schedule_presets(conn: &Connection) -> Result<Value, String> {
+        if let Ok(m_conn) = super::module_db::ModuleDbManager::get_connection("maintenance") {
+            let res: Result<String, _> = m_conn.query_row(
+                "SELECT data FROM custom_schedule_presets WHERE id = 'default'",
+                [],
+                |r| r.get(0),
+            );
+            if let Ok(data_str) = res {
+                if let Ok(val) = serde_json::from_str::<Value>(&data_str) {
+                    return Ok(val);
+                }
+            }
+        }
+        // Fallback from kv_meta
+        if let Ok(Some(val)) = Self::get_config(conn, "custom_schedule_presets") {
+            return Ok(val);
+        }
+        Ok(serde_json::json!([]))
+    }
+
+    pub fn save_custom_schedule_presets(conn: &Connection, presets: Value) -> Result<bool, String> {
+        let data_str = serde_json::to_string(&presets).unwrap_or_default();
+        if let Ok(m_conn) = super::module_db::ModuleDbManager::get_connection("maintenance") {
+            let _ = m_conn.execute(
+                "INSERT OR REPLACE INTO custom_schedule_presets (id, data) VALUES ('default', ?1)",
+                rusqlite::params![data_str],
+            );
+        }
+        let _ = Self::set_config(conn, "custom_schedule_presets", &presets);
+        Ok(true)
+    }
 }
+
 
 fn current_date_string() -> String {
     let secs = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as i64;
-    let days = (secs / 86400) as i64;
+    let days = secs / 86400;
     let z = days + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
     let doe = (z - era * 146097) as u32;
@@ -1198,7 +1519,7 @@ fn current_iso_timestamp() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as i64;
-    let days = (secs / 86400) as i64;
+    let days = secs / 86400;
     let rem_secs = (secs % 86400) as u32;
     let hours = rem_secs / 3600;
     let minutes = (rem_secs % 3600) / 60;
@@ -1435,5 +1756,349 @@ mod tests {
         assert_eq!(p["count"], 400.0);
         assert_eq!(b["count"], 150.0);
     }
+
+    #[test]
+    fn test_export_vault_and_decoupled_stores_json() {
+        let conn = Connection::open_in_memory().unwrap();
+        Database::init(&conn).unwrap();
+
+        let firearm = serde_json::json!({
+            "id": 1,
+            "make": "Colt",
+            "model": "Python",
+            "caliber": ".357 Mag"
+        });
+        InventoryStore::insert_firearm(&conn, firearm).unwrap();
+
+        let ammo = serde_json::json!({
+            "id": 1,
+            "brand": "Federal",
+            "caliber": ".357 Mag",
+            "count": 100
+        });
+        InventoryStore::insert_ammo(&conn, ammo).unwrap();
+
+        let loc = serde_json::json!({
+            "id": 1,
+            "name": "Main Safe"
+        });
+        InventoryStore::save_storage_location(&conn, loc).unwrap();
+
+        let vault_json = InventoryStore::export_vault_json(&conn).unwrap();
+        let val: Value = serde_json::from_str(&vault_json).unwrap();
+        assert_eq!(val["schemaVersion"], 2);
+        assert_eq!(val["firearms"].as_array().unwrap().len(), 1);
+        assert_eq!(val["ammo"].as_array().unwrap().len(), 1);
+        assert_eq!(val["storage_locations"].as_array().unwrap().len(), 1);
+
+        // Skus export test
+        let mut skus = serde_json::Map::new();
+        skus.insert("0123456789".to_string(), serde_json::json!({ "name": "Test SKU" }));
+        InventoryStore::save_skus(&conn, skus).unwrap();
+
+        let skus_json = InventoryStore::export_skus_json(&conn).unwrap();
+        let skus_val: Value = serde_json::from_str(&skus_json).unwrap();
+        assert_eq!(skus_val["schemaVersion"], 1);
+        assert!(skus_val["skus"].get("0123456789").is_some());
+
+        // Activity log export test
+        InventoryStore::insert_activity_log(&conn, serde_json::json!({
+            "timestamp": "2026-09-18T22:00:00Z",
+            "action": "TEST"
+        })).unwrap();
+
+        let act_json = InventoryStore::export_activity_log_json(&conn).unwrap();
+        let act_val: Value = serde_json::from_str(&act_json).unwrap();
+        assert_eq!(act_val["schemaVersion"], 1);
+        assert_eq!(act_val["activity_log"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_import_all_databases_sqlite_and_json() {
+        // 1. Create a dummy legacy SQLite file on disk with discrete schema
+        let temp_dir = std::env::temp_dir();
+        let temp_sqlite = temp_dir.join(format!("test_legacy_{}.sqlite", rand::random::<u32>()));
+        {
+            let src_conn = Connection::open(&temp_sqlite).unwrap();
+            src_conn.execute_batch(
+                "
+                CREATE TABLE firearms (
+                    id INTEGER PRIMARY KEY,
+                    make TEXT,
+                    model TEXT,
+                    serial_number TEXT,
+                    caliber TEXT
+                );
+                INSERT INTO firearms (id, make, model, serial_number, caliber)
+                VALUES (101, 'Smith & Wesson', 'Model 29', 'SW12345', '.44 Mag');
+
+                CREATE TABLE ammo (
+                    id INTEGER PRIMARY KEY,
+                    caliber TEXT,
+                    brand TEXT,
+                    bullet_type TEXT,
+                    data TEXT
+                );
+                INSERT INTO ammo (id, caliber, brand, bullet_type, data)
+                VALUES (201, '.44 Mag', 'Hornady', 'JHP', '{\"id\":201,\"caliber\":\".44 Mag\",\"brand\":\"Hornady\",\"roundCount\":50}');
+
+                CREATE TABLE storage_locations (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    data TEXT
+                );
+                INSERT INTO storage_locations (id, name, data)
+                VALUES ('safe-top', 'Top Shelf', '{\"id\":\"safe-top\",\"name\":\"Top Shelf\"}');
+
+                CREATE TABLE skus (
+                    id TEXT PRIMARY KEY,
+                    data TEXT
+                );
+                INSERT INTO skus (id, data)
+                VALUES ('SKU-999', '{\"name\":\"Universal Holster\",\"sku\":\"SKU-999\"}');
+                "
+            ).unwrap();
+        }
+
+        // 2. Open new memory DB and import legacy SQLite file
+        let mut dest_conn = Connection::open_in_memory().unwrap();
+        Database::init(&dest_conn).unwrap();
+
+        let count = Database::import_from_sqlite(&mut dest_conn, &temp_sqlite).unwrap();
+        assert!(count >= 4, "Expected at least 4 records imported, got {}", count);
+
+        let firearms = InventoryStore::get_firearms(&dest_conn).unwrap();
+        assert_eq!(firearms.len(), 1);
+        assert_eq!(firearms[0]["make"], "Smith & Wesson");
+        assert_eq!(firearms[0]["model"], "Model 29");
+
+        let ammo_list = InventoryStore::get_ammo(&dest_conn).unwrap();
+        assert_eq!(ammo_list.len(), 1);
+        assert_eq!(ammo_list[0]["brand"], "Hornady");
+
+        let locs = InventoryStore::get_storage_locations(&dest_conn).unwrap();
+        assert_eq!(locs.len(), 1);
+        assert_eq!(locs[0]["name"], "Top Shelf");
+
+        let skus = InventoryStore::get_skus(&dest_conn).unwrap();
+        assert!(skus.contains_key("SKU-999"));
+
+        // Clean up temp sqlite file
+        let _ = std::fs::remove_file(&temp_sqlite);
+
+        // 3. Test raw JSON array import
+        let raw_array_firearms = serde_json::json!([
+            {
+                "id": 102,
+                "make": "Ruger",
+                "model": "10/22",
+                "caliber": ".22 LR"
+            }
+        ]);
+        Database::import_legacy_json(&mut dest_conn, &raw_array_firearms).unwrap();
+
+        let firearms_after = InventoryStore::get_firearms(&dest_conn).unwrap();
+        assert_eq!(firearms_after.len(), 2);
+        assert!(firearms_after.iter().any(|f| f["make"] == "Ruger"));
+    }
+
+    #[test]
+    fn test_competitor_database_and_csv_import() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        Database::init(&conn).unwrap();
+
+        // 1. Competitor SQLite database (e.g. MyGunDB / GunSafe table and column names)
+        let temp_dir = std::env::temp_dir();
+        let competitor_sqlite = temp_dir.join(format!("test_competitor_{}.db", rand::random::<u32>()));
+        {
+            let src = Connection::open(&competitor_sqlite).unwrap();
+            src.execute_batch(
+                "
+                CREATE TABLE guns (
+                    gun_id INTEGER PRIMARY KEY,
+                    manufacturer TEXT,
+                    model_name TEXT,
+                    serial_no TEXT,
+                    cal TEXT,
+                    amount_paid REAL,
+                    notes TEXT
+                );
+                INSERT INTO guns (gun_id, manufacturer, model_name, serial_no, cal, amount_paid, notes)
+                VALUES (501, 'Colt', 'Python', 'PY998877', '.357 Magnum', 1499.99, 'Competitor export');
+
+                CREATE TABLE ammunition (
+                    ammo_id INTEGER PRIMARY KEY,
+                    brand_name TEXT,
+                    cartridge TEXT,
+                    bullet_style TEXT,
+                    current_stock INTEGER
+                );
+                INSERT INTO ammunition (ammo_id, brand_name, cartridge, bullet_style, current_stock)
+                VALUES (601, 'Winchester', '.357 Mag', 'JHP', 150);
+                "
+            ).unwrap();
+        }
+
+        let imported_count = Database::import_from_sqlite(&mut conn, &competitor_sqlite).unwrap();
+        assert_eq!(imported_count, 2);
+
+        let firearms = InventoryStore::get_firearms(&conn).unwrap();
+        let colt = firearms.iter().find(|f| f["make"] == "Colt").expect("Colt Python should be imported");
+        assert_eq!(colt["model"], "Python");
+        assert_eq!(colt["serial_number"], "PY998877");
+        assert_eq!(colt["caliber"], ".357 Magnum");
+        assert_eq!(colt["purchase_price"], 1499.99);
+
+        let ammo_list = InventoryStore::get_ammo(&conn).unwrap();
+        let win = ammo_list.iter().find(|a| a["brand"] == "Winchester").expect("Winchester ammo should be imported");
+        assert_eq!(win["caliber"], ".357 Mag");
+        assert_eq!(win["bullet_type"], "JHP");
+        assert_eq!(win["roundCount"], 150);
+
+        let _ = std::fs::remove_file(&competitor_sqlite);
+
+        // 2. Competitor CSV (FastBound / ATF Bound Book export)
+        let fastbound_csv = "Manufacturer and/or Importer,Model,Serial #,Caliber / Gauge,Purchase Price\n\
+                             Glock,19 Gen 5,BKWD123,9mm Luger,$549.99\n\
+                             Sig Sauer,P365X,79A987654,9mm,$599.00";
+        let csv_imported = Database::import_csv_content(&mut conn, fastbound_csv).unwrap();
+        assert_eq!(csv_imported, 2);
+
+        let firearms_after_csv = InventoryStore::get_firearms(&conn).unwrap();
+        assert!(firearms_after_csv.iter().any(|f| f["make"] == "Glock" && f["model"] == "19 Gen 5"));
+        assert!(firearms_after_csv.iter().any(|f| f["make"] == "Sig Sauer" && f["serial_number"] == "79A987654"));
+
+        // 3. Competitor TSV (Tab-separated Ammunition export)
+        let tsv_ammo = "Brand Name\tCaliber\tBullet Design\tInventory\n\
+                        Federal\t.45 ACP\tHST\t250\n\
+                        Speer\t9mm Luger\tGold Dot\t500";
+        let tsv_imported = Database::import_csv_content(&mut conn, tsv_ammo).unwrap();
+        assert_eq!(tsv_imported, 2);
+
+        let ammo_after_tsv = InventoryStore::get_ammo(&conn).unwrap();
+        assert!(ammo_after_tsv.iter().any(|a| a["brand"] == "Federal" && a["roundCount"] == 250));
+        assert!(ammo_after_tsv.iter().any(|a| a["brand"] == "Speer" && a["bullet_type"] == "Gold Dot"));
+    }
+
+    #[test]
+    fn test_reject_sync_item_lifecycle() {
+        let conn = Connection::open_in_memory().unwrap();
+        Database::init(&conn).unwrap();
+
+        // 1. Insert an item into sync_queue
+        let item_payload = serde_json::json!({
+            "type": "new_firearm",
+            "data": {
+                "make": "Heckler & Koch",
+                "model": "VP9",
+                "serial_number": "HK-TEST-7788",
+                "id": 8801
+            }
+        });
+        let item_id = "test-sync-hk-8801";
+        let now = chrono::Utc::now().timestamp_millis();
+        conn.execute(
+            "INSERT INTO sync_queue (id, payload, created_at) VALUES (?1, ?2, ?3)",
+            rusqlite::params![item_id, item_payload.to_string(), now],
+        ).unwrap();
+
+        let queue_before = InventoryStore::get_sync_queue(&conn).unwrap();
+        assert_eq!(queue_before.len(), 1);
+
+        // 2. Reject with delete_from_mobile = true
+        InventoryStore::reject_sync_item(&conn, item_id, true).unwrap();
+
+        // Queue must now be empty
+        let queue_after = InventoryStore::get_sync_queue(&conn).unwrap();
+        assert_eq!(queue_after.len(), 0);
+
+        // Rejection tombstone must be recorded
+        let rejections = InventoryStore::get_rejected_syncs(&conn).unwrap();
+        assert_eq!(rejections.len(), 1);
+        assert_eq!(rejections[0]["syncId"], item_id);
+        assert_eq!(rejections[0]["itemType"], "new_firearm");
+
+        // 3. Confirm rejections (as mobile would after purging)
+        let tombstone_id = rejections[0]["id"].as_str().unwrap().to_string();
+        InventoryStore::confirm_rejected_syncs(&conn, &[tombstone_id]).unwrap();
+
+        let rejections_after = InventoryStore::get_rejected_syncs(&conn).unwrap();
+        assert_eq!(rejections_after.len(), 0);
+    }
+
+    #[test]
+    fn test_paired_devices_lifecycle() {
+        let conn = Connection::open_in_memory().unwrap();
+        Database::init(&conn).unwrap();
+
+        // 1. Initial list must be empty
+        let devices = InventoryStore::get_paired_devices(&conn).unwrap();
+        assert_eq!(devices.len(), 0);
+
+        // 2. Upsert first device (is_new = true)
+        let is_new1 = InventoryStore::upsert_paired_device(
+            &conn,
+            "device-iphone-15",
+            "Daniel's iPhone 15 Pro",
+            "ios",
+            "192.168.1.105",
+            Some("tok-iphone-1"),
+            Some("key-iphone-vault-1"),
+        ).unwrap();
+        assert!(is_new1);
+
+        // Re-upserting same device (is_new = false)
+        let is_new_again = InventoryStore::upsert_paired_device(
+            &conn,
+            "device-iphone-15",
+            "Daniel's iPhone 15 Pro",
+            "ios",
+            "192.168.1.105",
+            Some("tok-iphone-1"),
+            Some("key-iphone-vault-1"),
+        ).unwrap();
+        assert!(!is_new_again);
+
+        // 3. Upsert second device (is_new = true)
+        let is_new2 = InventoryStore::upsert_paired_device(
+            &conn,
+            "device-pixel-8",
+            "Range Tablet Pixel",
+            "android",
+            "192.168.1.112",
+            Some("tok-pixel-2"),
+            Some("key-pixel-vault-2"),
+        ).unwrap();
+        assert!(is_new2);
+
+        let devices = InventoryStore::get_paired_devices(&conn).unwrap();
+        assert_eq!(devices.len(), 2);
+        assert!(devices.iter().any(|d| d["deviceName"] == "Daniel's iPhone 15 Pro"));
+        assert!(devices.iter().any(|d| d["deviceName"] == "Range Tablet Pixel"));
+
+        let keys = InventoryStore::get_paired_device_keys(&conn).unwrap();
+        assert_eq!(keys.len(), 2);
+
+        // 4. Update activity
+        InventoryStore::update_paired_device_activity(&conn, "device-iphone-15", Some("192.168.1.106")).unwrap();
+        let devices = InventoryStore::get_paired_devices(&conn).unwrap();
+        let iphone = devices.iter().find(|d| d["id"] == "device-iphone-15").unwrap();
+        assert_eq!(iphone["ipAddress"], "192.168.1.106");
+
+        // 5. Remove single device
+        let removed = InventoryStore::remove_paired_device(&conn, "device-pixel-8").unwrap();
+        assert!(removed);
+        let devices = InventoryStore::get_paired_devices(&conn).unwrap();
+        assert_eq!(devices.len(), 1);
+        assert_eq!(devices[0]["id"], "device-iphone-15");
+
+        // 6. Unpair all
+        let all_unpaired = InventoryStore::unpair_all_devices(&conn).unwrap();
+        assert!(all_unpaired);
+        let devices = InventoryStore::get_paired_devices(&conn).unwrap();
+        assert_eq!(devices.len(), 0);
+    }
 }
+
+
 

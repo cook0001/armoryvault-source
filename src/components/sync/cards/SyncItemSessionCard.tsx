@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, FileText, Target, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileText, Gauge, MapPin, Target, Trash2 } from 'lucide-react';
 import React from 'react';
 import type { Ammo, Firearm, SyncItem } from '../../../types';
 import { ScopeIcon } from '../../CustomIcons';
@@ -104,6 +104,46 @@ export const SyncItemSessionCard: React.FC<SyncItemSessionCardProps> = ({
                 </span>
               )}
             </div>
+
+            {(item.location || item.cost) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.3rem',
+                }}
+              >
+                {item.location && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={12} color="#38bdf8" />
+                    <span>Facility: {item.location}</span>
+                  </span>
+                )}
+                {item.location && item.cost ? <span>&bull;</span> : null}
+                {item.cost ? <span>Lane Fee: ${item.cost}</span> : null}
+              </div>
+            )}
+
+            {item.optic_name && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginTop: '0.35rem',
+                  color: '#38bdf8',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                }}
+              >
+                <ScopeIcon size={13} color="#38bdf8" />
+                <span>Mounted Optic: {item.optic_name}</span>
+              </div>
+            )}
+
             {firearm &&
               rounds > 0 &&
               (() => {
@@ -133,40 +173,100 @@ export const SyncItemSessionCard: React.FC<SyncItemSessionCardProps> = ({
                   </div>
                 );
               })()}
-            {item.group_metrics && (
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+              {item.group_metrics && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.4rem 0.75rem',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: '#34d399',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Target size={13} color="#34d399" />
+                    <span>
+                      {item.group_metrics.moa} MOA Group (
+                      {item.group_metrics.extremeSpreadInches || item.group_metrics.extreme_spread_in}
+                      ")
+                    </span>
+                  </span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    {item.group_metrics.shotCount || item.group_metrics.shot_count} Shots &bull; Mean
+                    Radius: {item.group_metrics.meanRadiusInches || item.group_metrics.mean_radius_in}
+                    "
+                  </span>
+                </div>
+              )}
+
+              {item.chrono_data && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.4rem 0.75rem',
+                    background: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: '#f59e0b',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Gauge size={13} color="#f59e0b" />
+                    <span>
+                      Chrono: {item.chrono_data.avg || item.chrono_data.averageVelocity || '—'} fps Avg
+                    </span>
+                  </span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    SD: {item.chrono_data.sd ?? item.chrono_data.standardDeviation ?? '—'} &bull; ES:{' '}
+                    {item.chrono_data.es ?? item.chrono_data.extremeSpread ?? '—'} &bull;{' '}
+                    {(item.chrono_data.shots || item.chrono_data.shotVelocities)?.length || 0} Shots
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {item.malfunctions && item.malfunctions.length > 0 && (
               <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.75rem',
-                  marginTop: '0.5rem',
-                  padding: '0.4rem 0.75rem',
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  gap: '6px',
+                  marginTop: '0.4rem',
+                  padding: '3px 8px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
                   borderRadius: '6px',
+                  color: '#f87171',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
                 }}
               >
-                <span
-                  style={{
-                    color: '#34d399',
-                    fontWeight: 'bold',
-                    fontSize: '0.85rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Target size={13} color="#34d399" />
-                  <span>
-                    {item.group_metrics.moa} MOA Group (
-                    {item.group_metrics.extremeSpreadInches || item.group_metrics.extreme_spread_in}
-                    ")
-                  </span>
-                </span>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                  {item.group_metrics.shotCount || item.group_metrics.shot_count} Shots &bull; Mean
-                  Radius: {item.group_metrics.meanRadiusInches || item.group_metrics.mean_radius_in}
-                  "
+                <AlertTriangle size={13} />
+                <span>
+                  Stoppages: {item.malfunctions.map((m: any) => `${m.count}x ${m.type}`).join(', ')}
                 </span>
               </div>
             )}
@@ -207,10 +307,10 @@ export const SyncItemSessionCard: React.FC<SyncItemSessionCardProps> = ({
               </div>
             )}
 
-            {item.photoBase64 && (
+            {(item.photoBase64 || item.photo_path || item.target_photo_path) && (
               <div style={{ marginTop: '0.75rem' }}>
                 <img
-                  src={item.photoBase64}
+                  src={item.photoBase64 || item.photo_path || item.target_photo_path}
                   alt="Target Grouping"
                   style={{
                     height: '80px',
@@ -219,7 +319,9 @@ export const SyncItemSessionCard: React.FC<SyncItemSessionCardProps> = ({
                     cursor: 'pointer',
                     objectFit: 'cover',
                   }}
-                  onClick={() => window.open(item.photoBase64)}
+                  onClick={() =>
+                    window.open(item.photoBase64 || item.photo_path || item.target_photo_path)
+                  }
                   title="Click to view full target"
                 />
               </div>

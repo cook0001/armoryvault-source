@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -8,7 +9,7 @@ export default defineConfig(() => ({
   base: './',
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(import.meta.dirname, './src'),
     },
   },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -40,5 +41,19 @@ export default defineConfig(() => ({
         },
       },
     },
+  },
+  test: {
+    pool: 'threads',
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+    globals: true,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/src/utils/activityLogDatabase.test.ts',
+      '**/src/utils/moduleDataManager.test.ts',
+      '**/src/utils/skuDatabase.test.ts',
+      '**/src/utils/zipBackup.test.ts',
+    ],
   },
 }));
