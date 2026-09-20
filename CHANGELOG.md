@@ -6,6 +6,9 @@
 - **Custom Application & Taskbar Icon Suite (`app-icon.png`, `src-tauri/icons/`)**:
   - Implemented high-definition Heavy Vault Door & Biometric Cipher icon (Concept A) featuring circular geared locking lugs, heavy vault safe door, illuminated emerald green security ring, and central tactical defense shield.
   - Generated complete cross-platform icon assets for macOS (`icon.icns`), Windows (`icon.ico`, `Square*Logo.png`), and Linux (`32x32.png`, `64x64.png`, `128x128.png`, `icon.png`).
+- **Tauri Minisign (Ed25519) Release Signing (`tauri.conf.json`, `build-all.yml`)**:
+  - Configured Tauri v2 Minisign public key and updater artifacts generation (`createUpdaterArtifacts: true`).
+  - Integrated `TAURI_SIGNING_PRIVATE_KEY` into GitHub Actions release workflow for automated cross-platform binary signing.
 
 ## [3.0.0] - 2026-09-19
 

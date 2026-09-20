@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,6 +41,11 @@
     ],
     "macOS": {
       "infoPlist": "Info.plist"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGODY4OTA3MDk1M0UwMkMKUldRczRGTUpCNG1Hdi9Ram4yVTZNdy9jVmlnOWN2WENKK3I2US9VWUtoQXlyS2NyWFM5TE5tYUwK"
     }
   }
 }
