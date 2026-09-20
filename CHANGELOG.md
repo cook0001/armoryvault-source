@@ -1,6 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## [3.0.0] - 2026-09-19
+
+### Official Tauri v2 Production Release & Final Electron Build Certification
+
+- **ArmoryVault Tauri v2 Stable Production Release (`v3.0.0`)**:
+  - Official elevation of the lightweight, native Rust-powered Tauri v2 desktop application to the primary, stable production release channel.
+  - Symmetrical cross-platform support across macOS (Apple Silicon aarch64 & Intel x86_64), Windows (x64 NSIS), and Linux (AppImage & DEB).
+  - High-performance in-memory SQLite runtime with pure-Rust AES-256-GCM authenticated encryption and zero plaintext at rest.
+- **Final Official Electron Release Certification (`v3.0.0-Electron`)**:
+  - Formally certifies **`v3.0.0-Electron` (commit `581ff1a`) as the final release of the legacy Electron architecture**.
+  - All future active desktop development, security patches, compliance toolkits, and ecosystem integrations are exclusively maintained on the native Tauri v2 engine.
 
 ### Added
 
@@ -193,6 +203,52 @@
   - Updated modular extension catalog endpoints in `ModuleManager.js` to point to `https://armstrader.store/armoryvault/modules/modules-index.json`.
   - Migrated web portal documentation and links in `README.md` and `website/` to `https://armstrader.store/armoryvault`.
   - Deprecated GitHub Pages deployment workflow in `.github/workflows/website.yml`.
+
+---
+
+## [3.0.0-Electron] - 2026-09-18
+
+### Final Electron Release Notice
+
+- **Final Official Electron Release (`v3.0.0-Electron`)**:
+  - Marks the final milestone release of the Electron-based `ArmoryVault_Desktop` platform.
+  - All future active desktop development, features, and performance enhancements migrate entirely to the lightweight, native Rust-powered Tauri v2 client (`ArmoryVault_Desktop_Tauri`).
+
+### UI & Styling System Harmonization
+
+- **Global Theme Tokens & Compatibility CSS Variables (`src/index.css`, `src/utils/themeEngine.ts`, `index.html`)**:
+  - Defined missing `:root` compatibility CSS variables (`--card-bg`, `--bg-card`, `--border`, `--border-color`, `--text`, `--text-main`) to resolve unstyled backgrounds and collapsed borders across page and modal components.
+  - Added dynamic accent tokens (`--accent-badge-bg`, `--accent-border`, `--accent-glow-raw`, `--accent-glow-shadow`) exposed via `themeEngine.ts` and initialized in `index.html`.
+  - Harmonized buttons (`.btn-primary` uses `var(--accent)` and `var(--accent-hover)`), active sidebar nav links, active filter chips, active view-mode toggles, icon button hovers, form input focus rings (`.form-input`), upload zones (`.photo-upload`), modal backdrops, toast indicators, and `.vault-spinner` to dynamically follow user accent presets (OD Green, FDE, Crimson, Violet, Sand, Gunmetal, Blue, and Custom Hex).
+  - Enhanced canvas overrides for OLED (`#0c0c0c` true contrast modal backgrounds without washouts) and Flat Slate (`--bg-surface-elevated`).
+- **Page Container & Layout Rhythm Standardization**:
+  - `StorageOrganizer.tsx`: Replaced redundant nested padding with `.page-container` and `.page-header` with `.header-actions`.
+  - `LoadDevelopment.tsx`: Standardized outer wrapper to `<div className="page-container">` and `<div className="no-print page-header">`.
+  - `NfaTracker.tsx`: Standardized outer wrapper to `<div className="page-container">` and `<div className="no-print page-header">`.
+  - `BallisticsCalculator.tsx`: Standardized outer container to `<div className="page-container">` and `<div className="page-header">`.
+  - `VaultLogin.tsx`: Added `.bg-mesh` and `.bg-grid` background elements, dynamic `--bg-canvas`, and accent border styling to align with application aesthetic standards.
+- **Settings & Route Navigation Alignment (`src/components/settings/AppearanceSettingsSection.tsx`)**:
+  - Corrected startup route target values (`/`, `/ammo`, `/components`, `/accessories`, `/bound-book`, `/maintenance`, `/storage`, `/load-development`, `/ballistics`, `/nfa-tracker`), repairing broken links to reloading and compliance bound book.
+  - Switched privacy mode shield banner styling from static blue RGBA to dynamic `var(--accent-badge-bg)`.
+- **CSS Vendor Prefixing & Cross-Browser Styling Harmonization (`src/index.css`, `website/style.css`, `website/index.html`)**:
+  - Enforced strict vendor prefix ordering across all CSS declarations (`-webkit-backdrop-filter` preceding `backdrop-filter`, `-webkit-user-select` preceding `user-select`, and `background-clip: text`).
+  - Added cross-browser `-ms-overflow-style: none;` alongside `scrollbar-width: none;` for clean scrollbar suppression.
+  - Merged duplicate class attributes on landing page comparison table cells to maintain clean W3C validity and strict Biome compliance.
+  - Codified permanent vendor prefixing and zero-inline-styles policies into workspace `AGENTS.md` rules.
+- **Modular Reloading Performance & Data Caching (`src/modules/reloading/ReloadingComponents.tsx`)**:
+  - Synced module implementation with cached `useVaultData()`, instant `buildStorageIndex()` O(1) lookups, and memoized filters.
+
+### Electron Build & Security Hardening
+
+- **ASAR Payload Optimization & Dependency Hygiene (`package.json`)**:
+  - Segregated frontend-only packages (`lucide-react`, `react`, `react-dom`, `qrcode`, `react-qr-code`, `react-router-dom`, `react-window`) from `"dependencies"` into `"devDependencies"`.
+  - Dramatically shrank `app.asar` size from 46.1 MB to < 5 MB (>90% reduction) by eliminating duplicate uncompiled icon and React vendor trees in production distributions.
+  - Declared explicit `asarUnpack` patterns for native image pipeline dependencies (`sharp` and `@img/sharp-libvips-*`).
+  - Formalized explicit NSIS installer parameters for Windows releases.
+- **Renderer Window & Navigation Security Guards (`electron/main.js`)**:
+  - Implemented `setWindowOpenHandler` intercepting `window.open` and target `_blank` anchor clicks, preventing rogue Electron windows and safely routing external HTTP/HTTPS/mailto URLs to the user's default system browser via `shell.openExternal`.
+  - Added `will-navigate` lifecycle guard to lock navigation strictly to the local application runtime (`app://` and dev server).
+  - Sanitized `getArmsTraderDbPath` by removing hardcoded personal filesystem paths and introducing `process.env.ARMSTRADER_DB` override support.
 
 ---
 

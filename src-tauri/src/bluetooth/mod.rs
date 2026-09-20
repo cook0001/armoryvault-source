@@ -59,7 +59,7 @@ impl BleCentralManager {
         };
 
         // Fall back to scanning all nearby devices if service filter is unsupported by backend
-        if let Err(_) = adapter.start_scan(filter).await {
+        if adapter.start_scan(filter).await.is_err() {
             adapter
                 .start_scan(ScanFilter::default())
                 .await
@@ -106,7 +106,7 @@ impl BleCentralManager {
         let _ = adapter.stop_scan().await;
 
         // Sort strongest signal first (closest proximity)
-        discovered.sort_by(|a, b| b.rssi.unwrap_or(-100).cmp(&a.rssi.unwrap_or(-100)));
+        discovered.sort_by_key(|a| std::cmp::Reverse(a.rssi.unwrap_or(-100)));
 
         Ok(discovered)
     }

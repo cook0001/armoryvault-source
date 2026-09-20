@@ -1,7 +1,7 @@
-# ArmoryVault (Tauri v2 Native Beta)
+# ArmoryVault (Tauri v2 Native Production Suite)
 
-[![Build All Native Installers](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml/badge.svg?branch=beta)](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml)
-[![Quality Control](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml/badge.svg?branch=beta)](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml)
+[![Build All Native Installers](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml/badge.svg?branch=main)](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml)
+[![Quality Control](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml/badge.svg?branch=main)](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml)
 [![Tauri Version](https://img.shields.io/badge/Tauri-v2.0-blue.svg?style=flat-square&logo=tauri)](https://tauri.app)
 [![Rust Core](https://img.shields.io/badge/Rust-2021%20Edition-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Database](https://img.shields.io/badge/SQLite-In--Memory%20ACID-003B57.svg?style=flat-square&logo=sqlite)](https://sqlite.org)
@@ -9,14 +9,15 @@
 [![Frontend](https://img.shields.io/badge/React-19%20%2B%20TypeScript-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
 [![License](https://img.shields.io/badge/License-Proprietary%20Freeware-blue.svg?style=flat-square)](LICENSE)
 
-> **Welcome to the ArmoryVault Beta Branch.**  
-> This branch hosts the next-generation **native Tauri v2 rewrite** of ArmoryVault, delivering a **~95% smaller installer** and **~75% reduced memory footprint** while preserving 100% two-way data compatibility with existing user vaults and backups.
+> **Official ArmoryVault Stable Production Release (`v3.0.0`).**  
+> Powered by the lightweight, native **Tauri v2 + Rust architecture**, delivering a **~95% smaller installer** and **~75% reduced memory footprint** while preserving 100% two-way data compatibility with existing user vaults and backups.  
+> *Notice: The legacy Electron platform has been officially retired at **`v3.0.0-Electron`**, which remains preserved in repository history as the final Electron build.*
 
 ---
 
 ## Performance & Architectural Benchmarks
 
-| Metric | ArmoryVault (Electron Stable) | ArmoryVault (Tauri v2 Beta) | Impact |
+| Metric | ArmoryVault (Electron Final) | ArmoryVault (Tauri v2 Stable) | Impact |
 | :--- | :--- | :--- | :--- |
 | **macOS DMG Installer** | ~180.0 MB | **8.7 MB** | **95.2% smaller download** |
 | **Installed App Footprint** | ~420.0 MB | **11.0 MB** | **97.4% less disk space** |

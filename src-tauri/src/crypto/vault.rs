@@ -473,6 +473,7 @@ pub fn decode_base64_variants(s: &str) -> Result<Vec<u8>, String> {
 }
 
 /// Helper to decode a string that may be encoded as either hex or base64.
+#[allow(clippy::manual_is_multiple_of)]
 pub fn decode_hex_or_base64(s: &str) -> Result<Vec<u8>, String> {
     let trimmed = s.trim();
     if trimmed.len() % 2 == 0 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
