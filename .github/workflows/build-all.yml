@@ -121,5 +121,26 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: warn
+
+  notify-store:
+    name: Notify ArmsTrader Store
+    needs: [build-tauri]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
+    steps:
+      - name: Trigger ArmsTrader Store Sync
+        run: |
+          echo "ArmoryVault build completed. Attempting to trigger ArmsTrader Store release sync..."
+          if [ -n "${{ secrets.ARMSTRADER_DISPATCH_TOKEN }}" ]; then
+            echo "Dispatching release sync to cook0001/armstrader.store..."
+            curl -s -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.ARMSTRADER_DISPATCH_TOKEN }}" \
+              https://api.github.com/repos/cook0001/armstrader.store/dispatches \
+              -d '{"event_type": "app_released", "client_payload": {"app": "armoryvault", "version": "${{ github.ref_name }}"}}' || true
+          else
+            echo "Notice: ARMSTRADER_DISPATCH_TOKEN not configured in source repository."
+            echo "ArmsTrader Store autonomous 2-hour cron sync will detect and stream these new binaries to the server."
+          fi
+
