@@ -1,6 +1,6 @@
 [package]
 name = "armoryvault_desktop_tauri"
-version = "3.0.0"
+version = "3.1.0"
 description = "ArmoryVault Native Desktop Application"
 authors = ["cook0001"]
 edition = "2021"

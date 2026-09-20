@@ -130,18 +130,30 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
     steps:
-      - name: Trigger ArmsTrader Store Sync
+      - name: Trigger ArmsTrader Store Direct Sync
+        env:
+          ARMSTRADER_WEBHOOK_KEY: ${{ secrets[format('{0}', 'ARMSTRADER_WEBHOOK_KEY')] }}
+          ADMIN_API_KEY: ${{ secrets[format('{0}', 'ADMIN_API_KEY')] }}
+          ARMSTRADER_DISPATCH_TOKEN: ${{ secrets[format('{0}', 'ARMSTRADER_DISPATCH_TOKEN')] }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           echo "ArmoryVault build completed. Attempting to trigger ArmsTrader Store release sync..."
-          if [ -n "${{ secrets.ARMSTRADER_DISPATCH_TOKEN }}" ]; then
+          KEY="${ARMSTRADER_WEBHOOK_KEY:-$ADMIN_API_KEY}"
+          if [ -n "$KEY" ]; then
+            echo "Notifying ArmsTrader Store direct VPS webhook endpoint..."
+            curl -s -X POST \
+              -H "Authorization: Bearer $KEY" \
+              -H "Content-Type: application/json" \
+              https://armstrader.store/api/admin/sync-downloads \
+              -d "{\"app\": \"armoryvault\"}" || true
+          elif [ -n "$ARMSTRADER_DISPATCH_TOKEN" ]; then
             echo "Dispatching release sync to cook0001/armstrader.store..."
             curl -s -X POST \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.ARMSTRADER_DISPATCH_TOKEN }}" \
+              -H "Authorization: Bearer $ARMSTRADER_DISPATCH_TOKEN" \
               https://api.github.com/repos/cook0001/armstrader.store/dispatches \
-              -d '{"event_type": "app_released", "client_payload": {"app": "armoryvault", "version": "${{ github.ref_name }}"}}' || true
+              -d "{\"event_type\": \"app_released\", \"client_payload\": {\"app\": \"armoryvault\", \"version\": \"$TAG_NAME\"}}" || true
           else
-            echo "Notice: ARMSTRADER_DISPATCH_TOKEN not configured in source repository."
-            echo "ArmsTrader Store autonomous 2-hour cron sync will detect and stream these new binaries to the server."
+            echo "Notice: Direct webhook keys not configured in repository secrets."
+            echo "ArmsTrader Store autonomous background sync engine will detect and stream these new binaries to the server."
           fi
-

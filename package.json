@@ -1,7 +1,7 @@
 {
   "name": "armoryvault",
   "productName": "ArmoryVault",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "ArmoryVault Native Desktop Application (Tauri v2 + Rust + SQLite)",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",

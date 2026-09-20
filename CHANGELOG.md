@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-20
+
 ### Added
 - **Custom Application & Taskbar Icon Suite (`app-icon.png`, `src-tauri/icons/`)**:
   - Implemented high-definition Heavy Vault Door & Biometric Cipher icon (Concept A) featuring circular geared locking lugs, heavy vault safe door, illuminated emerald green security ring, and central tactical defense shield.

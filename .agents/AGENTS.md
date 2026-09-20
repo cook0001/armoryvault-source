@@ -1,11 +1,11 @@
 # ArmoryVault AI Agent Rules
 
-## 1. Package-Centric Versioning & Release Requirements
-- **Lock Versions During Active Development**: During active feature development and iterative refactoring, NEVER bump the version in `package.json`. The version remains locked in development while features and fixes are added. Document all changes in `CHANGELOG.md` under an `[Unreleased]` or in-progress package header.
-- **Atomic Final Release Bumping**: Before preparing any push to GitHub or generating an official release, ALWAYS determine the correct version bump by following the rules in `VersionControl` (Major.Minor.Patch) once the entire update package is finalized. Update the version string in `package.json` to reflect this change.
-- **Changelog Maintenance**: Every significant change MUST be documented in `CHANGELOG.md` under the appropriate version header. Keep a clear record of features, bug fixes, and improvements.
-- **Documentation Updates**: Ensure `README.md` is kept up-to-date if any new scripts, architectural patterns, features, or setup steps are introduced.
-- **Gitignore Hygiene**: If new environment files, build artifacts, keystores, or temporary folders are added to the project, ensure they are properly excluded in `.gitignore`.
+## 1. Package-Centric Versioning, Local Isolation & GitHub Push Standard
+- **Local Isolation During Testing**: All changes, builds, refactors, and test runs MUST remain strictly local. NEVER push to GitHub prematurely without explicit instruction from the user.
+- **Lock Versions During Active Development**: The version in `package.json`, `Cargo.toml`, and `tauri.conf.json` remains strictly LOCKED during feature development and testing. Document all changes in `CHANGELOG.md` under an `[Unreleased]` header.
+- **Atomic Version Bumping on "Push to GitHub"**: When the user explicitly requests to "push to github" (or equivalent release instruction), determine the correct SemVer bump (Major.Minor.Patch) from `[Unreleased]`, bump all version strings simultaneously, and promote the changelog to a version header with the current date.
+- **Mandatory GitHub Actions Monitoring**: Immediately after pushing to GitHub, actively monitor the triggered GitHub Actions workflow runs (`gh run list` / `gh run view`) to completion and verify that every job succeeds with a green checkmark (`✓`). If any step fails, immediately inspect the failure log and resolve it.
+- **Documentation Updates**: Ensure `README.md` and `.gitignore` are kept up-to-date with any new scripts, architecture, or environment files.
 
 ## 2. Build and Deployment Context
 - **Framework**: This is an Electron + React + Vite + TypeScript application (`dist-electron` and `dist` outputs). 
