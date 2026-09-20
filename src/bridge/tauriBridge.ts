@@ -965,6 +965,96 @@ export async function setupDesktopBridge(): Promise<void> {
           ? fallbackApi.checkRemoteModules()
           : { success: true, modules: {} };
       },
+
+      downloadModule: async (moduleId: string) => {
+        try {
+          const downloadUrl = `https://armstrader.store/armoryvault/modules/download/${encodeURIComponent(moduleId)}`;
+          const res = await fetch(downloadUrl, {
+            headers: {
+              'X-ArmoryVault-Client': 'desktop',
+              Accept: 'application/zip, application/octet-stream, */*',
+            },
+          });
+
+          if (!res.ok) {
+            console.warn(`[TauriBridge] downloadModule returned HTTP ${res.status} from ${downloadUrl}`);
+            return fallbackApi.downloadModule
+              ? fallbackApi.downloadModule(moduleId)
+              : { success: false, error: `HTTP ${res.status}` };
+          }
+
+          const buffer = await res.arrayBuffer();
+          if (buffer.byteLength > 0 && typeof crypto !== 'undefined' && crypto.subtle) {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const computedSha256 = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+            console.log(
+              `[TauriBridge] Downloaded module ${moduleId} (${buffer.byteLength} bytes, SHA-256: ${computedSha256})`
+            );
+          }
+
+          let disk: string[] = [];
+          try {
+            disk = (await invoke<string[]>('get_config', { key: 'installed_disk_modules' })) || [];
+          } catch {
+            disk = JSON.parse(localStorage.getItem('av_mock_disk_modules') || '[]');
+          }
+
+          if (!Array.isArray(disk)) disk = [];
+          if (!disk.includes(moduleId)) {
+            disk.push(moduleId);
+            try {
+              await invoke('set_config', { key: 'installed_disk_modules', value: disk });
+            } catch {
+              localStorage.setItem('av_mock_disk_modules', JSON.stringify(disk));
+            }
+          }
+
+          return { success: true, moduleId };
+        } catch (err: any) {
+          console.warn('[TauriBridge] downloadModule network failed, falling back:', err);
+          return fallbackApi.downloadModule
+            ? fallbackApi.downloadModule(moduleId)
+            : { success: false, error: err.message };
+        }
+      },
+
+      deleteModuleFiles: async (moduleId: string) => {
+        try {
+          let disk: string[] = [];
+          try {
+            disk = (await invoke<string[]>('get_config', { key: 'installed_disk_modules' })) || [];
+          } catch {
+            disk = JSON.parse(localStorage.getItem('av_mock_disk_modules') || '[]');
+          }
+
+          if (Array.isArray(disk)) {
+            const filtered = disk.filter((id) => id !== moduleId);
+            try {
+              await invoke('set_config', { key: 'installed_disk_modules', value: filtered });
+            } catch {
+              localStorage.setItem('av_mock_disk_modules', JSON.stringify(filtered));
+            }
+          }
+          return { success: true };
+        } catch (err: any) {
+          console.warn('[TauriBridge] deleteModuleFiles error, falling back:', err);
+          return fallbackApi.deleteModuleFiles
+            ? fallbackApi.deleteModuleFiles(moduleId)
+            : { success: true };
+        }
+      },
+
+      getInstalledDiskModules: async () => {
+        try {
+          const disk = await invoke<string[]>('get_config', { key: 'installed_disk_modules' });
+          if (Array.isArray(disk) && disk.length > 0) return disk;
+        } catch {}
+        return fallbackApi.getInstalledDiskModules
+          ? fallbackApi.getInstalledDiskModules()
+          : [];
+      },
+
       archiveModuleData: async (moduleId: string, dataKeys: string[]) => {
         try {
           const archives = (await invoke<any>('get_config', { key: 'module_archives' })) || {};
