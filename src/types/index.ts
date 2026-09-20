@@ -106,6 +106,7 @@ export interface Accessory {
   photo?: string | null;
   photos?: string[];
   upc_code?: string;
+  sku?: string;
   storageLocationId?: number;
 
   // NFA Info
@@ -181,6 +182,7 @@ export interface Ammo {
   oal?: number;
   notes?: string;
   upc_code?: string;
+  sku?: string;
   upc_match?: string;
   isPlusP?: boolean;
   target_stock_goal?: number;
@@ -621,6 +623,11 @@ declare global {
       }>;
       getPairingToken?: () => Promise<string | null>;
       revokePairingToken?: () => Promise<boolean>;
+      // Bluetooth LE Pairing
+      isBluetoothAvailable?: () => Promise<boolean>;
+      scanBleCompanions?: (timeoutSecs?: number) => Promise<DiscoveredCompanion[]>;
+      pairBleCompanion?: (peripheralId: string, pin: string) => Promise<any>;
+
       // Paired Devices Management
       getPairedDevices?: () => Promise<PairedDevice[]>;
       removePairedDevice?: (id: string) => Promise<boolean>;
@@ -837,6 +844,13 @@ export interface PairedDevice {
   isActive: boolean;
 }
 
+export interface DiscoveredCompanion {
+  id: string;
+  name: string;
+  rssi?: number;
+  is_armoryvault: boolean;
+}
+
 export interface SyncItem {
   id?: number;
   type:
@@ -853,6 +867,7 @@ export interface SyncItem {
     | 'bill_of_sale_transfer'
     | 'chrono_string'
     | 'target_analysis'
+    | 'optic_zero_update'
     | 'malfunction_report'
     | 'custom_payload';
   upcOrId?: string;

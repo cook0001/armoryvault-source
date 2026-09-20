@@ -1,3 +1,4 @@
+pub mod bluetooth;
 pub mod commands;
 pub mod crypto;
 pub mod server;
@@ -103,6 +104,11 @@ pub fn run() {
             get_paired_device_keys,
             remove_paired_device,
             unpair_all_devices,
+
+            // Bluetooth LE Pairing
+            is_bluetooth_available,
+            scan_ble_companions,
+            pair_ble_companion,
 
             // Chronograph & Target Analyses
             get_chrono_strings,

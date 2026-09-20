@@ -6,6 +6,7 @@ export * from './BatchManufactureModal';
 export * from './ChangePasswordModal';
 export * from './CsvImportModal';
 export * from './FflPickerModal';
+export * from './LicenseModal';
 export * from './ModuleCenterModal';
 export * from './MountAccessoryModal';
 export * from './OpticZeroModal';

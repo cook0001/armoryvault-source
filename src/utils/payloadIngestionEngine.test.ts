@@ -201,5 +201,91 @@ describe('ArmoryVault Payload Ingestion Engine (Desktop Scope)', () => {
     expect(parsed.summaryTitle).toBe('Colt Python');
     expect(parsed.summarySubtitle).toContain('.357 Magnum');
   });
+
+  it('extracts Base64 photos, preserves existing ID, and updates in-place without duplicates', async () => {
+    const existingFirearm = {
+      id: 42,
+      make: 'Glock',
+      model: '19 Gen 5',
+      caliber: '9mm',
+      serial_number: 'GLOCK-12345',
+      photos: ['/existing/path/photo1.jpg'],
+      round_count: 500,
+    };
+
+    (window as any).api.getFirearms = vi.fn().mockResolvedValue([existingFirearm]);
+    (window as any).api.saveBase64Photo = vi.fn().mockResolvedValue('/extracted/photo2.jpg');
+    (window as any).api.updateFirearm = vi.fn().mockResolvedValue(1);
+
+    const updatePayload = {
+      type: 'firearm_update',
+      firearm: {
+        make: 'Glock',
+        model: '19 Gen 5 MOS',
+        serial_number: 'GLOCK-12345',
+        photosBase64: ['data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...'],
+      },
+    };
+
+    const parsed = await parseAndValidatePayload(JSON.stringify(updatePayload));
+    expect(parsed.success).toBe(true);
+    expect(parsed.format).toBe('armoryvault_firearm');
+
+    const result = await commitParsedPayload(parsed);
+    expect(result.success).toBe(true);
+    expect((window as any).api.saveBase64Photo).toHaveBeenCalled();
+    expect((window as any).api.updateFirearm).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        id: 42,
+        make: 'Glock',
+        model: '19 Gen 5 MOS',
+        photos: ['/existing/path/photo1.jpg', '/extracted/photo2.jpg'],
+      })
+    );
+    expect((window as any).api.addFirearm).not.toHaveBeenCalled();
+  });
+
+  it('ingests optic zero updates and updates matching accessory in-place', async () => {
+    const existingAccessory = {
+      id: 77,
+      type: 'Optic',
+      manufacturer: 'Trijicon',
+      model: 'RMR Type 2',
+      serialNumber: 'RMR-99001',
+      notes: 'Initial mount',
+    };
+
+    (window as any).api.getAccessories = vi.fn().mockResolvedValue([existingAccessory]);
+    (window as any).api.updateAccessory = vi.fn().mockResolvedValue(1);
+
+    const opticZeroPayload = {
+      type: 'optic_zero_update',
+      accessory: {
+        serialNumber: 'RMR-99001',
+        manufacturer: 'Trijicon',
+        model: 'RMR Type 2',
+        zeroDistance: 25,
+        clickValue: '1 MOA',
+        notes: 'Zeroed at 25 yards indoors',
+      },
+    };
+
+    const parsed = await parseAndValidatePayload(JSON.stringify(opticZeroPayload));
+    expect(parsed.success).toBe(true);
+    expect(parsed.format).toBe('armoryvault_accessory');
+
+    const result = await commitParsedPayload(parsed);
+    expect(result.success).toBe(true);
+    expect((window as any).api.updateAccessory).toHaveBeenCalledWith(
+      77,
+      expect.objectContaining({
+        id: 77,
+        zeroDistance: 25,
+        clickValue: '1 MOA',
+      })
+    );
+    expect((window as any).api.addAccessory).not.toHaveBeenCalled();
+  });
 });
 

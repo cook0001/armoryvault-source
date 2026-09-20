@@ -378,6 +378,7 @@ pub fn get_sync_queue(state: State<AppState>) -> Result<Vec<Value>, String> {
 #[tauri::command]
 pub fn remove_sync_item(id: String, state: State<AppState>, app_handle: AppHandle) -> Result<String, String> {
     let res = state.with_db(|conn| InventoryStore::remove_sync_item(conn, &id).map_err(|e| e.to_string()))?;
+    let _ = state.flush_vault();
     let _ = app_handle.emit("sync-queue-changed", serde_json::json!({ "action": "removed", "id": &id }));
     Ok(res)
 }
@@ -385,6 +386,7 @@ pub fn remove_sync_item(id: String, state: State<AppState>, app_handle: AppHandl
 #[tauri::command]
 pub fn reject_sync_item(id: String, delete_from_mobile: Option<bool>, state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
     state.with_db(|conn| InventoryStore::reject_sync_item(conn, &id, delete_from_mobile.unwrap_or(true)).map_err(|e| e.to_string()))?;
+    let _ = state.flush_vault();
     let _ = app_handle.emit("sync-queue-changed", serde_json::json!({ "action": "rejected", "id": &id }));
     Ok(())
 }
@@ -402,6 +404,7 @@ pub fn confirm_rejected_syncs(ids: Vec<String>, state: State<AppState>) -> Resul
 #[tauri::command]
 pub fn clear_sync_queue(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
     state.with_db(|conn| InventoryStore::clear_sync_queue(conn).map_err(|e| e.to_string()))?;
+    let _ = state.flush_vault();
     let _ = app_handle.emit("sync-queue-changed", serde_json::json!({ "action": "cleared" }));
     Ok(())
 }
@@ -462,11 +465,15 @@ pub fn get_paired_devices(state: State<AppState>) -> Result<Vec<Value>, String> 
 
 #[tauri::command]
 pub fn remove_paired_device(state: State<AppState>, id: String) -> Result<bool, String> {
-    state.with_db(|conn| InventoryStore::remove_paired_device(conn, &id).map_err(|e| e.to_string()))
+    let res = state.with_db(|conn| InventoryStore::remove_paired_device(conn, &id).map_err(|e| e.to_string()))?;
+    let _ = state.flush_vault();
+    Ok(res)
 }
 
 #[tauri::command]
 pub fn unpair_all_devices(state: State<AppState>) -> Result<bool, String> {
-    state.with_db(|conn| InventoryStore::unpair_all_devices(conn).map_err(|e| e.to_string()))
+    let res = state.with_db(|conn| InventoryStore::unpair_all_devices(conn).map_err(|e| e.to_string()))?;
+    let _ = state.flush_vault();
+    Ok(res)
 }
 

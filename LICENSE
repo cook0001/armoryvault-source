@@ -1,15 +1,46 @@
-ISC License
+ARMORYVAULT END USER LICENSE AGREEMENT (EULA)
+Proprietary Free-to-Use Software License
 
-Copyright (c) 2026 Daniel C. (cook0001)
+Copyright (c) 2026 Daniel Cook (cook0001) / ArmoryVault.
+All Rights Reserved.
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
+IMPORTANT: PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT") CAREFULLY BEFORE DOWNLOADING, INSTALLING, COPYING, OR USING THE ARMORYVAULT APPLICATION, MODULES, OR ACCOMPANYING DOCUMENTATION (COLLECTIVELY, THE "SOFTWARE"). BY DOWNLOADING, INSTALLING, OR USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE TO THESE TERMS, DO NOT INSTALL, COPY, OR USE THE SOFTWARE.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
+1. LICENSE GRANT (FREE FOR PERSONAL USE)
+Subject to the terms and conditions of this Agreement, Daniel Cook ("Licensor") grants you a personal, revocable, non-exclusive, non-transferable, royalty-free license to download, install, and execute the binary and executable forms of the Software on devices owned or controlled by you, solely for your individual, personal, and non-commercial firearms inventory, reloading management, and ballistics calculations ("Permitted Purpose").
+
+2. PROPRIETARY RIGHTS & CLOSED-SOURCE STANDARD
+The Software, including its source code, object code, design, logos, user interfaces, documentation, and underlying algorithms, is proprietary intellectual property owned exclusively by the Licensor and is protected by United States and international copyright, trade secret, and intellectual property laws. 
+
+This Software is NOT open source. No source code license is granted or implied. All rights not expressly granted to you under Section 1 of this Agreement are strictly reserved by the Licensor.
+
+3. RESTRICTIONS
+You shall not, directly or indirectly:
+(a) Decompile, disassemble, reverse engineer, decrypt, extract, or otherwise attempt to derive or reconstruct the source code of the Software or any part thereof;
+(b) Modify, adapt, translate, enhance, or create derivative works of the Software or any portion thereof;
+(c) Sell, resell, rent, lease, lend, license, sublicense, distribute, assign, host, outsource, or commercially exploit the Software or make the Software available to any third party for a fee;
+(d) Distribute, publish, or mirror pre-compiled binary packages, APKs, DMGs, EXEs, MSIs, or application bundles outside of official ArmoryVault distribution channels without prior written consent from the Licensor;
+(e) Remove, alter, cover, or obscure any copyright notices, proprietary legends, trademarks, or digital signatures affixed to or contained within the Software;
+(f) Re-brand, white-label, fork, or redistribute the Software under any other project, product, or company name.
+
+4. USER DATA SOVEREIGNTY & AIR-GAPPED PRIVACY
+The Licensor firmly believes in absolute privacy and individual sovereignty:
+(a) You retain 100% sole, exclusive, and unencumbered ownership of all data, firearm records, serial numbers, reloading recipes, range logs, images, and encryption keys created or stored within the Software ("User Data").
+(b) The Software is architected to operate 100% locally and offline. It does not contain telemetry, tracking beacons, analytics trackers, or third-party cloud connections.
+(c) Local Wi-Fi synchronization between Desktop and Companion devices operates strictly point-to-point within your local area network (LAN) using user-controlled end-to-end encryption. The Licensor has zero access to your vault, passwords, or inventory.
+
+5. DISCLAIMER OF WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITH ALL FAULTS AND WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, ACCURACY, AND NON-INFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS, OPERATE WITHOUT INTERRUPTION, BE SECURE, OR BE ENTIRELY FREE OF DEFECTS OR ERRORS.
+
+6. FIREARMS & HANDLOADING SAFETY DISCLAIMER
+ARMORYVAULT AND ITS INCLUDED TOOLS, BALLISTICS CALCULATORS, POWDER CHARGE METRICS, TORQUE SPECIFICATIONS, AND MAINTENANCE GAUGES ARE PROVIDED STRICTLY AS INFORMATIONAL AIDS. 
+
+HANDLOADING, AMMUNITION MANUFACTURING, FIREARM MODIFICATIONS, AND SHOOTING SPORTS INVOLVE INHERENT RISKS OF SEVERE BODILY INJURY, DEATH, AND PROPERTY DAMAGE. YOU ARE SOLELY RESPONSIBLE FOR VERIFYING ALL RELOADING DATA AGAINST CERTIFIED PUBLISHED LOAD MANUALS FROM RECOGNIZED POWDER AND BULLET MANUFACTURERS (E.G., HODGDON, ALLIANT, VIHTAVUORI, HORNADY, SIERRA) AND COMPLYING WITH ALL APPLICABLE LOCAL, STATE, AND FEDERAL LAWS (INCLUDING ATF REGULATIONS). 
+
+UNDER NO CIRCUMSTANCES SHALL THE LICENSOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES ARISING FROM RELOADING ERRORS, WEAPON MALFUNCTIONS, ACCIDENTS, MISUSE, OR RELIANCE UPON DATA GENERATED OR STORED BY THE SOFTWARE.
+
+7. TERMINATION
+This Agreement is effective until terminated. Your rights under this Agreement will terminate immediately and automatically without notice from the Licensor if you fail to comply with any of the terms or restrictions set forth herein. Upon termination, you must cease all use of the Software and permanently delete and destroy all copies of the Software in your possession or control.
+
+8. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between you and the Licensor concerning the Software and supersedes all prior or contemporaneous understandings, representations, and agreements regarding the subject matter hereof.

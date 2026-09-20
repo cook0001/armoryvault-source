@@ -6,6 +6,8 @@
  *  *.avmaintenance, *.avtransfer, *.avbundle)
  */
 
+import { ensureItemSku } from './skuEngine';
+
 export interface EncryptedPayloadEnvelope {
   $schema?: string;
   format: 'armoryvault_encrypted_payload';
@@ -168,29 +170,73 @@ export async function decryptPayloadEnvelope<T = any>(
 export function identifyPayloadFormat(data: any): PayloadFormat | null {
   if (!data || typeof data !== 'object') return null;
 
-  if (data.format === 'armoryvault_firearm' || data.firearm) {
+  if (
+    data.format === 'armoryvault_firearm' ||
+    data.firearm ||
+    data.type === 'firearm_update' ||
+    data.type === 'new_firearm' ||
+    data.type === 'firearm_photo' ||
+    (data.data && (data.data.make || data.data.model || data.data.serial_number))
+  ) {
     return 'armoryvault_firearm';
   }
-  if (data.format === 'armoryvault_range_session' || data.session) {
+  if (
+    data.format === 'armoryvault_range_session' ||
+    data.session ||
+    data.type === 'range_session' ||
+    data.type === 'chrono_string' ||
+    data.type === 'target_analysis'
+  ) {
     return 'armoryvault_range_session';
   }
-  if (data.format === 'armoryvault_ammo' || data.ammo) {
+  if (
+    data.format === 'armoryvault_ammo' ||
+    data.ammo ||
+    data.type === 'ammo_adjustment' ||
+    data.type === 'ammo_update' ||
+    (data.data && data.data.caliber && (data.data.count !== undefined || data.data.rounds !== undefined))
+  ) {
     return 'armoryvault_ammo';
   }
-  if (data.format === 'armoryvault_reloading_component' || data.component) {
+  if (
+    data.format === 'armoryvault_reloading_component' ||
+    data.format === 'armoryvault_component' ||
+    data.component ||
+    data.type === 'component_adjustment' ||
+    data.type === 'reloading_adjustment'
+  ) {
     return 'armoryvault_reloading_component';
   }
-  if (data.format === 'armoryvault_accessory' || data.accessory) {
+  if (
+    data.format === 'armoryvault_accessory' ||
+    data.accessory ||
+    data.type === 'accessory_adjustment' ||
+    data.type === 'optic_zero_update'
+  ) {
     return 'armoryvault_accessory';
   }
-  if (data.format === 'armoryvault_maintenance' || data.maintenance) {
+  if (
+    data.format === 'armoryvault_maintenance' ||
+    data.maintenance ||
+    data.type === 'firearm_log' ||
+    data.type === 'firearm_maintenance'
+  ) {
     return 'armoryvault_maintenance';
   }
-  if (data.format === 'armoryvault_transfer' || data.transfer_id) {
+  if (
+    data.format === 'armoryvault_transfer' ||
+    data.transfer_id ||
+    data.type === 'bill_of_sale_transfer'
+  ) {
     return 'armoryvault_transfer';
   }
   if (data.format === 'armoryvault_bundle' || (data.payload && data.summary)) {
     return 'armoryvault_bundle';
+  }
+
+  // Fallback: If it has make/model or caliber/serial_number, it's a firearm
+  if (data.make || data.model || (data.serial_number && data.caliber)) {
+    return 'armoryvault_firearm';
   }
 
   return null;
@@ -380,85 +426,259 @@ export async function commitParsedPayload(
   const errors: string[] = [];
   const itemsCommitted: Array<{ type: string; name: string }> = [];
 
+  const extractPhotos = async (data: any): Promise<string[]> => {
+    const saved: string[] = [];
+    const b64List: string[] = [];
+    if (data.photosBase64 && Array.isArray(data.photosBase64)) {
+      b64List.push(...data.photosBase64);
+    } else if (data.photoBase64) {
+      b64List.push(data.photoBase64);
+    }
+    if (Array.isArray(data.photos)) {
+      for (const p of data.photos) {
+        if (typeof p === 'string' && (p.startsWith('data:image') || (p.length > 200 && !p.startsWith('/') && !p.startsWith('file://')))) {
+          b64List.push(p);
+        }
+      }
+    }
+    if (api && typeof api.saveBase64Photo === 'function') {
+      for (let i = 0; i < b64List.length; i++) {
+        try {
+          const raw = b64List[i];
+          const ext = raw.includes('/') ? (raw.split(';')[0].split('/')[1] || 'jpg') : 'jpg';
+          const filename = `firearm_ingest_${Date.now()}_${i}.${ext}`;
+          const path = await api.saveBase64Photo(raw, filename);
+          if (path) saved.push(path);
+        } catch (e) {
+          console.warn('Failed saving photo during ingest:', e);
+        }
+      }
+    }
+    return saved;
+  };
+
   try {
     switch (parsed.format) {
       case 'armoryvault_firearm': {
-        const firearmData = parsed.data.firearm || parsed.data;
-        await api.addFirearm(firearmData);
-        itemsCommitted.push({
-          type: 'Firearm',
-          name: firearmData.name || `${firearmData.make || ''} ${firearmData.model || ''}`.trim(),
-        });
+        const rawFirearm = parsed.data.firearm || parsed.data.data || parsed.data;
+        const savedPhotos = await extractPhotos(rawFirearm);
+        const { photoBase64: _p1, photosBase64: _p2, firearmId: _fid, ...cleanFirearm } = rawFirearm;
+
+        const firearms = await api.getFirearms();
+        const fId = Number(rawFirearm.id || rawFirearm.firearmId);
+        const serial = rawFirearm.serial_number ? String(rawFirearm.serial_number).trim().toLowerCase() : '';
+
+        const existing = (firearms || []).find(
+          (f: any) =>
+            (fId && f.id === fId) ||
+            (serial && f.serial_number && f.serial_number.trim().toLowerCase() === serial)
+        );
+
+        if (existing && existing.id !== undefined) {
+          const existingPhotos = Array.isArray(existing.photos) ? existing.photos : [];
+          const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
+          const updated = {
+            ...existing,
+            ...cleanFirearm,
+            id: existing.id, // Strictly preserve existing record ID
+            photos: mergedPhotos,
+            image_path: existing.image_path || (mergedPhotos.length > 0 ? mergedPhotos[0] : ''),
+          };
+          await api.updateFirearm(existing.id, updated);
+          itemsCommitted.push({
+            type: 'Firearm (Updated)',
+            name: updated.name || `${updated.make || ''} ${updated.model || ''}`.trim() || 'Firearm',
+          });
+        } else {
+          const newFirearm = {
+            ...cleanFirearm,
+            photos: savedPhotos,
+            image_path: savedPhotos.length > 0 ? savedPhotos[0] : (cleanFirearm.image_path || ''),
+          };
+          await api.addFirearm(newFirearm);
+          itemsCommitted.push({
+            type: 'Firearm (New)',
+            name: newFirearm.name || `${newFirearm.make || ''} ${newFirearm.model || ''}`.trim() || 'Firearm',
+          });
+        }
         break;
       }
 
       case 'armoryvault_range_session': {
-        const sessionData = parsed.data.session || parsed.data;
+        const sessionData = parsed.data.session || parsed.data.data || parsed.data;
         if (typeof api.logRangeSession === 'function') {
           await api.logRangeSession(sessionData);
         } else {
-          // Fallback via firearm log
-          await api.addFirearmLog(sessionData.firearm_id || 0, {
-            type: 'Range',
-            date: sessionData.date || new Date().toISOString(),
-            rounds_fired: sessionData.rounds_fired || 0,
-            notes: sessionData.notes || 'Ingested from range session payload',
+          const firearms = await api.getFirearms();
+          const target = (firearms || []).find((f: any) => f.id === Number(sessionData.firearm_id));
+          if (target) {
+            const newLog = {
+              id: Date.now() + Math.random(),
+              type: 'Range',
+              date: sessionData.date || new Date().toISOString().split('T')[0],
+              rounds_fired: Number(sessionData.rounds_fired) || 0,
+              notes: sessionData.notes || 'Ingested from range session payload',
+            };
+            const updatedLogs = [...(target.logs || []), newLog];
+            await api.updateFirearm(target.id, { ...target, logs: updatedLogs });
+          }
+        }
+
+        if (sessionData.group_metrics && typeof api.addTargetAnalysis === 'function') {
+          await api.addTargetAnalysis({
+            distance_yards: sessionData.group_metrics.distanceYards || sessionData.distance_yards || 100,
+            moa: sessionData.group_metrics.moa,
+            extreme_spread_inches: sessionData.group_metrics.extremeSpreadInches,
+            mean_radius_inches: sessionData.group_metrics.meanRadiusInches,
+            shot_count: sessionData.group_metrics.shotCount || sessionData.rounds_fired || 5,
+            date: sessionData.date || new Date().toISOString().split('T')[0],
+            optic_name: sessionData.optic_name,
+            notes: `Range Session (${sessionData.rounds_fired || 0} rds)${sessionData.location ? ` @ ${sessionData.location}` : ''}`,
           });
         }
+
+        if (sessionData.chrono_data && typeof api.addChronoString === 'function') {
+          await api.addChronoString({
+            firearm_id: sessionData.firearm_id,
+            ammo_id: sessionData.ammo_id,
+            date: sessionData.date || new Date().toISOString().split('T')[0],
+            average_velocity: sessionData.chrono_data.averageVelocity ?? sessionData.chrono_data.avg,
+            standard_deviation: sessionData.chrono_data.standardDeviation ?? sessionData.chrono_data.sd,
+            extreme_spread: sessionData.chrono_data.extremeSpread ?? sessionData.chrono_data.es,
+            shot_count: sessionData.chrono_data.shots?.length || sessionData.rounds_fired || 0,
+            notes: sessionData.chrono_data.notes || '',
+          });
+        }
+
         itemsCommitted.push({
           type: 'Range Session',
-          name: `Session on ${sessionData.date || 'Recent'}`,
+          name: `Session on ${sessionData.date || 'Recent'} (${sessionData.rounds_fired || 0} rds)`,
         });
         break;
       }
 
       case 'armoryvault_ammo': {
-        const ammoData = parsed.data.ammo || parsed.data;
-        await api.addAmmo(ammoData);
-        itemsCommitted.push({
-          type: 'Ammunition',
-          name: `${ammoData.manufacturer || ''} ${ammoData.name || ammoData.caliber || ''}`.trim(),
-        });
+        const ammoData = parsed.data.ammo || parsed.data.data || parsed.data;
+        await ensureItemSku(ammoData, 'ammo', api);
+        const allAmmo = await api.getAmmo();
+        const match = (allAmmo || []).find(
+          (a: any) =>
+            (ammoData.id && a.id === ammoData.id) ||
+            (ammoData.sku && (a.sku === ammoData.sku || a.upc_code === ammoData.sku)) ||
+            (ammoData.upc_code && (a.upc_code === ammoData.upc_code || a.sku === ammoData.upc_code)) ||
+            (ammoData.brand && ammoData.caliber && a.brand?.toLowerCase() === ammoData.brand?.toLowerCase() && a.caliber?.toLowerCase() === ammoData.caliber?.toLowerCase()) ||
+            (ammoData.manufacturer && ammoData.caliber && a.brand?.toLowerCase() === ammoData.manufacturer?.toLowerCase() && a.caliber?.toLowerCase() === ammoData.caliber?.toLowerCase())
+        );
+
+        if (match && match.id !== undefined) {
+          const countAdj = parseInt(ammoData.count || ammoData.quantity || 0);
+          const currentCount = parseInt(match.count || 0);
+          const updatedCount = ammoData.action === 'remove' ? Math.max(0, currentCount - countAdj) : currentCount + countAdj;
+          await api.updateAmmo(match.id, { ...match, ...ammoData, id: match.id, count: updatedCount });
+          itemsCommitted.push({
+            type: 'Ammunition (Updated)',
+            name: `${match.brand || match.manufacturer || ''} ${match.name || match.caliber || ''}`.trim(),
+          });
+        } else {
+          await api.addAmmo(ammoData);
+          itemsCommitted.push({
+            type: 'Ammunition (New)',
+            name: `${ammoData.brand || ammoData.manufacturer || ''} ${ammoData.name || ammoData.caliber || ''}`.trim(),
+          });
+        }
         break;
       }
 
       case 'armoryvault_reloading_component': {
-        const compData = parsed.data.component || parsed.data;
-        await api.addComponent(compData);
-        itemsCommitted.push({
-          type: 'Component',
-          name: `${compData.manufacturer || ''} ${compData.name || compData.type || ''}`.trim(),
-        });
+        const compData = parsed.data.component || parsed.data.data || parsed.data;
+        await ensureItemSku(compData, 'component', api);
+        const allComps = api.getComponents ? await api.getComponents() : [];
+        const match = (allComps || []).find(
+          (c: any) =>
+            (compData.id && c.id === compData.id) ||
+            (compData.sku && (c.sku === compData.sku || c.upc_code === compData.sku)) ||
+            (compData.upc_code && (c.upc_code === compData.upc_code || c.sku === compData.upc_code))
+        );
+
+        if (match && match.id !== undefined && api.updateComponent) {
+          const countAdj = parseInt(compData.count || compData.quantity || 0);
+          const currentCount = parseInt(match.quantity || 0);
+          const updatedCount = compData.action === 'remove' ? Math.max(0, currentCount - countAdj) : currentCount + countAdj;
+          await api.updateComponent(match.id, { ...match, ...compData, id: match.id, quantity: updatedCount });
+          itemsCommitted.push({
+            type: 'Component (Updated)',
+            name: `${match.manufacturer || ''} ${match.name || match.type || ''}`.trim(),
+          });
+        } else {
+          await api.addComponent(compData);
+          itemsCommitted.push({
+            type: 'Component (New)',
+            name: `${compData.manufacturer || ''} ${compData.name || compData.type || ''}`.trim(),
+          });
+        }
         break;
       }
 
       case 'armoryvault_accessory': {
-        const accData = parsed.data.accessory || parsed.data;
-        await api.addAccessory(accData);
-        itemsCommitted.push({
-          type: 'Accessory',
-          name: `${accData.manufacturer || ''} ${accData.name || accData.model || ''}`.trim(),
-        });
+        const accData = parsed.data.accessory || parsed.data.data || parsed.data;
+        await ensureItemSku(accData, 'accessory', api);
+        const allAcc = api.getAccessories ? await api.getAccessories() : [];
+        const match = (allAcc || []).find(
+          (a: any) =>
+            (accData.id && a.id === accData.id) ||
+            (accData.serialNumber && a.serialNumber && a.serialNumber.toLowerCase() === accData.serialNumber.toLowerCase()) ||
+            (accData.sku && (a.sku === accData.sku || a.upc_code === accData.sku)) ||
+            (accData.upc && (a.upc === accData.upc || a.upc_code === accData.upc))
+        );
+
+        if (match && match.id !== undefined && api.updateAccessory) {
+          await api.updateAccessory(match.id, { ...match, ...accData, id: match.id });
+          itemsCommitted.push({
+            type: 'Accessory (Updated)',
+            name: `${match.manufacturer || ''} ${match.name || match.model || ''}`.trim(),
+          });
+        } else {
+          await api.addAccessory(accData);
+          itemsCommitted.push({
+            type: 'Accessory (New)',
+            name: `${accData.manufacturer || ''} ${accData.name || accData.model || ''}`.trim(),
+          });
+        }
         break;
       }
 
       case 'armoryvault_maintenance': {
-        const maintData = parsed.data.maintenance || parsed.data;
-        await api.addFirearmLog(maintData.firearm_id || 0, {
-          type: maintData.type || 'Cleaning',
-          date: maintData.date || new Date().toISOString(),
-          notes: maintData.notes || 'Ingested maintenance payload',
-        });
-        itemsCommitted.push({
-          type: 'Maintenance',
-          name: `${maintData.type || 'Service'} Log`,
-        });
+        const maintData = parsed.data.maintenance || parsed.data.data || parsed.data;
+        const firearms = await api.getFirearms();
+        const fId = Number(maintData.firearm_id || maintData.firearmId);
+        const targetFirearm = (firearms || []).find((f: any) => f.id === fId);
+
+        if (targetFirearm && targetFirearm.id !== undefined) {
+          const newLog = {
+            id: Date.now() + Math.random(),
+            type: maintData.type || maintData.service_type || 'Cleaning',
+            date: maintData.date || new Date().toISOString().split('T')[0],
+            notes: maintData.notes || 'Ingested maintenance payload',
+            cost: Number(maintData.cost) || 0,
+            rounds_fired: Number(maintData.rounds_at_service || maintData.rounds_fired) || 0,
+          };
+          const updatedLogs = [...(targetFirearm.logs || []), newLog];
+          await api.updateFirearm(targetFirearm.id, { ...targetFirearm, logs: updatedLogs });
+          itemsCommitted.push({
+            type: 'Maintenance Log',
+            name: `${newLog.type} for ${targetFirearm.make} ${targetFirearm.model}`,
+          });
+        } else {
+          itemsCommitted.push({
+            type: 'Maintenance',
+            name: `${maintData.type || 'Service'} Log`,
+          });
+        }
         break;
       }
 
       case 'armoryvault_transfer': {
         const transferData = parsed.data;
-        // Record disposition if matching firearm exists
         const firearms = await api.getFirearms();
         const targetFirearm = (firearms || []).find(
           (f: any) =>
@@ -488,10 +708,23 @@ export async function commitParsedPayload(
         const bundle = parsed.data.payload || {};
 
         if (Array.isArray(bundle.firearms)) {
+          const firearms = await api.getFirearms();
           for (const f of bundle.firearms) {
             try {
-              await api.addFirearm(f);
-              itemsCommitted.push({ type: 'Firearm', name: f.name || f.make });
+              const savedPhotos = await extractPhotos(f);
+              const serial = f.serial_number ? String(f.serial_number).trim().toLowerCase() : '';
+              const existing = (firearms || []).find(
+                (ef: any) => serial && ef.serial_number && ef.serial_number.trim().toLowerCase() === serial
+              );
+              if (existing) {
+                const existingPhotos = Array.isArray(existing.photos) ? existing.photos : [];
+                const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
+                await api.updateFirearm(existing.id, { ...existing, ...f, id: existing.id, photos: mergedPhotos });
+                itemsCommitted.push({ type: 'Firearm (Updated)', name: f.name || f.make });
+              } else {
+                await api.addFirearm({ ...f, photos: savedPhotos });
+                itemsCommitted.push({ type: 'Firearm (New)', name: f.name || f.make });
+              }
             } catch (err: any) {
               errors.push(`Firearm (${f.name}): ${err.message}`);
             }
@@ -501,6 +734,7 @@ export async function commitParsedPayload(
         if (Array.isArray(bundle.ammo)) {
           for (const a of bundle.ammo) {
             try {
+              await ensureItemSku(a, 'ammo', api);
               await api.addAmmo(a);
               itemsCommitted.push({ type: 'Ammunition', name: a.name || a.caliber });
             } catch (err: any) {
@@ -512,6 +746,7 @@ export async function commitParsedPayload(
         if (Array.isArray(bundle.components)) {
           for (const c of bundle.components) {
             try {
+              await ensureItemSku(c, 'component', api);
               await api.addComponent(c);
               itemsCommitted.push({ type: 'Component', name: c.name || c.type });
             } catch (err: any) {
@@ -523,6 +758,7 @@ export async function commitParsedPayload(
         if (Array.isArray(bundle.accessories)) {
           for (const acc of bundle.accessories) {
             try {
+              await ensureItemSku(acc, 'accessory', api);
               await api.addAccessory(acc);
               itemsCommitted.push({ type: 'Accessory', name: acc.name || acc.model });
             } catch (err: any) {

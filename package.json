@@ -4,7 +4,7 @@
   "version": "2.11.0-Tauri",
   "description": "ArmoryVault Native Desktop Application (Tauri v2 + Rust + SQLite)",
   "private": true,
-  "license": "ISC",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
     "dev": "vite",

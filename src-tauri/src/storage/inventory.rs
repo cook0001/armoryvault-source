@@ -519,6 +519,9 @@ impl InventoryStore {
             )
             .unwrap_or(false);
 
+        let device_token = device_token.filter(|s| !s.trim().is_empty());
+        let device_key = device_key.filter(|s| !s.trim().is_empty());
+
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
             "INSERT INTO paired_devices (id, device_name, device_type, ip_address, paired_at, last_active_at, is_active, device_token, device_key)
@@ -529,8 +532,8 @@ impl InventoryStore {
                 ip_address = excluded.ip_address,
                 last_active_at = excluded.last_active_at,
                 is_active = 1,
-                device_token = COALESCE(excluded.device_token, paired_devices.device_token),
-                device_key = COALESCE(excluded.device_key, paired_devices.device_key)",
+                device_token = COALESCE(NULLIF(excluded.device_token, ''), paired_devices.device_token),
+                device_key = COALESCE(NULLIF(excluded.device_key, ''), paired_devices.device_key)",
             params![id, device_name, device_type, ip_address, now, now, device_token, device_key],
         )?;
         Ok(!is_already_paired)
@@ -599,6 +602,23 @@ impl InventoryStore {
         for k in rows.flatten() {
             if !k.trim().is_empty() {
                 keys.push(k);
+            }
+        }
+        Ok(keys)
+    }
+
+    pub fn get_all_paired_decryption_keys(conn: &Connection) -> Result<Vec<String>> {
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT device_token FROM paired_devices WHERE is_active = 1 AND device_token IS NOT NULL AND device_token != ''
+             UNION
+             SELECT DISTINCT device_key FROM paired_devices WHERE is_active = 1 AND device_key IS NOT NULL AND device_key != ''"
+        )?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+        let mut keys = Vec::new();
+        for k in rows.flatten() {
+            let trimmed = k.trim().to_string();
+            if !trimmed.is_empty() && !keys.contains(&trimmed) {
+                keys.push(trimmed);
             }
         }
         Ok(keys)
@@ -2097,6 +2117,55 @@ mod tests {
         assert!(all_unpaired);
         let devices = InventoryStore::get_paired_devices(&conn).unwrap();
         assert_eq!(devices.len(), 0);
+    }
+
+    #[test]
+    fn test_paired_device_vault_lock_unlock_persistence() {
+        let conn1 = Connection::open_in_memory().unwrap();
+        Database::init(&conn1).unwrap();
+
+        // 1. Pair a device with a custom companion passphrase / key
+        InventoryStore::upsert_paired_device(
+            &conn1,
+            "pixel-7-pro-id",
+            "Google Pixel 7 Pro",
+            "android",
+            "172.18.105.38",
+            Some("tok-session-12345"),
+            Some("dBC@1997"),
+        ).unwrap();
+
+        // Verify device in conn1
+        let devices_before = InventoryStore::get_paired_devices(&conn1).unwrap();
+        assert_eq!(devices_before.len(), 1);
+        assert_eq!(devices_before[0]["deviceKey"], "dBC@1997");
+        assert_eq!(devices_before[0]["isActive"], true);
+
+        // 2. Export to encrypted vault JSON payload (simulate flush_vault on lock)
+        let exported_json_str = InventoryStore::export_vault_json(&conn1).unwrap();
+        assert!(exported_json_str.contains("dBC@1997"));
+        assert!(exported_json_str.contains("pixel-7-pro-id"));
+
+        // Drop conn1 (simulate RAM drop on vault lock)
+        drop(conn1);
+
+        // 3. Brand-new connection (simulate vault unlock)
+        let mut conn2 = Connection::open_in_memory().unwrap();
+        Database::init(&conn2).unwrap();
+
+        let root_val: Value = serde_json::from_str(&exported_json_str).unwrap();
+        Database::import_legacy_json(&mut conn2, &root_val).unwrap();
+
+        // 4. Verify paired device is fully restored with active status and custom passphrase
+        let devices_after = InventoryStore::get_paired_devices(&conn2).unwrap();
+        assert_eq!(devices_after.len(), 1);
+        assert_eq!(devices_after[0]["id"], "pixel-7-pro-id");
+        assert_eq!(devices_after[0]["deviceName"], "Google Pixel 7 Pro");
+        assert_eq!(devices_after[0]["deviceKey"], "dBC@1997");
+        assert_eq!(devices_after[0]["isActive"], true);
+
+        let keys_after = InventoryStore::get_paired_device_keys(&conn2).unwrap();
+        assert_eq!(keys_after, vec!["dBC@1997"]);
     }
 }
 

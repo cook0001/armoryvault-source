@@ -15,6 +15,7 @@ import {
   WidgetVisibilityConfig,
 } from '@/utils/themeEngine';
 import {
+  AboutLicenseSettingsSection,
   AppearanceSettingsSection,
   BackupSettingsSection,
   PreferencesSettingsSection,
@@ -22,6 +23,7 @@ import {
   SecuritySettingsSection,
 } from '../settings';
 import { CsvImportModal } from './CsvImportModal';
+import { LicenseModal } from './LicenseModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -49,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
     const [showTotalSetupValue, setShowTotalSetupValue] = useState(false);
     const [showCollectionAnalytics, setShowCollectionAnalytics] = useState(false);
     const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+    const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
     const [theme, setTheme] = useState<ThemeConfig>(() => getStoredTheme());
     const [customColor, setCustomColor] = useState<string>(
       () => theme.customAccentColor || '#3b82f6'
@@ -319,6 +322,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
                   handleWidgetToggle('collectionAnalytics');
                 }}
               />
+
+              {/* Legal, Licensing & Data Sovereignty Section */}
+              <AboutLicenseSettingsSection
+                onOpenLicenseModal={() => setIsLicenseModalOpen(true)}
+              />
             </div>
 
             <div className="modal-actions settings-footer-actions">
@@ -335,6 +343,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
             onImportComplete={() => {
               if (onSettingsSaved) onSettingsSaved();
             }}
+          />
+        )}
+        {isLicenseModalOpen && (
+          <LicenseModal
+            isOpen={isLicenseModalOpen}
+            onClose={() => setIsLicenseModalOpen(false)}
           />
         )}
       </>,

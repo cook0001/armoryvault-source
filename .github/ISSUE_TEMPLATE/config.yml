@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📖 Official User Guide & Knowledge Base
-    url: https://cook0001.github.io/ArmoryVault/#docs
+  - name: Official User Guide & Knowledge Base
+    url: https://armstrader.store/armoryvault/#docs
     about: Please check the official guides for installation fixes, pairing, and backups.
-  - name: 🛡️ Security Vulnerability Reporting
-    url: https://github.com/cook0001/ArmoryVault/security/advisories/new
+  - name: Security Vulnerability Reporting
+    url: https://github.com/cook0001/armoryvault-source/security/advisories/new
     about: Privately report sensitive security or cryptographic issues.

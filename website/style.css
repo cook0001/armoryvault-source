@@ -2302,3 +2302,104 @@ a:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   Privacy Policy Page Layout & Styling (Zero Inline Styles Protocol)
+   ========================================================================== */
+.privacy-main {
+  padding-top: 120px;
+  padding-bottom: 80px;
+}
+
+.privacy-container {
+  max-width: 860px;
+}
+
+.privacy-header {
+  text-align: left;
+  margin-bottom: 32px;
+}
+
+.privacy-title {
+  font-size: 2.4rem;
+}
+
+.privacy-subtitle {
+  margin: 0;
+}
+
+.privacy-intro-card {
+  margin-bottom: 32px;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.privacy-intro-badge {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.privacy-intro-heading {
+  color: #f8fafc;
+}
+
+.privacy-intro-desc {
+  margin-bottom: 0;
+}
+
+.privacy-sections-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.privacy-card {
+  padding: 28px;
+}
+
+.privacy-section-h2 {
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.privacy-section-p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.privacy-list {
+  color: var(--text-secondary);
+  padding-left: 24px;
+  margin-top: 10px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.privacy-btn-cluster {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.privacy-footer-bottom {
+  border-top: none;
+  padding-top: 0;
+}
+
+.privacy-footer-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.privacy-footer-link {
+  color: var(--text-secondary);
+}
+
+.privacy-footer-link-cyan {
+  color: var(--accent-cyan);
+}

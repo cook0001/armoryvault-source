@@ -1150,9 +1150,18 @@ pub fn import_json(conn: &mut Connection, root_json: &Value) -> Result<(), Strin
                 let ip = dev.get("ipAddress").or_else(|| dev.get("ip_address")).and_then(|v| v.as_str());
                 let paired_at = dev.get("pairedAt").or_else(|| dev.get("paired_at")).and_then(|v| v.as_str()).unwrap_or("");
                 let last_active = dev.get("lastActiveAt").or_else(|| dev.get("last_active_at")).and_then(|v| v.as_str()).unwrap_or("");
-                let is_active = dev.get("isActive").or_else(|| dev.get("is_active")).and_then(|v| v.as_i64()).unwrap_or(1);
-                let device_token = dev.get("deviceToken").or_else(|| dev.get("device_token")).and_then(|v| v.as_str());
-                let device_key = dev.get("deviceKey").or_else(|| dev.get("device_key")).and_then(|v| v.as_str());
+                let is_active = dev.get("isActive")
+                    .or_else(|| dev.get("is_active"))
+                    .map(|v| {
+                        if let Some(b) = v.as_bool() {
+                            if b { 1 } else { 0 }
+                        } else {
+                            v.as_i64().unwrap_or(1)
+                        }
+                    })
+                    .unwrap_or(1);
+                let device_token = dev.get("deviceToken").or_else(|| dev.get("device_token")).and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
+                let device_key = dev.get("deviceKey").or_else(|| dev.get("device_key")).and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
 
                 let _ = tx.execute(
                     "INSERT OR REPLACE INTO paired_devices (id, device_name, device_type, ip_address, paired_at, last_active_at, is_active, device_token, device_key)

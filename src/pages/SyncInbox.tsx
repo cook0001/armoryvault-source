@@ -1,4 +1,4 @@
-import { CheckCircle, Package, RefreshCw, Server, Smartphone, Trash2 } from 'lucide-react';
+import { Bluetooth, CheckCircle, Package, RefreshCw, Server, Smartphone, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -13,11 +13,13 @@ import {
   UnknownRouteModal,
   PairedDevicesTab,
 } from '../components/sync';
+import { BlePairingModal } from '../components/sync/modals/BlePairingModal';
 import { useModules } from '../modules/registry/ModuleContext';
 import { Ammo, Firearm, PairedDevice, ReloadingComponent, SyncItem } from '../types';
 import { parseBarcodeData } from '../utils/BarcodeEngine';
 import { parseCurrency, parseCurrencyOrNull } from '../utils/currency';
 import { assignItemToStorage, saveStorageLocations } from '../utils/StorageSync';
+import { ensureItemSku } from '../utils/skuEngine';
 
 export const SyncInbox = () => {
   const [activeTab, setActiveTab] = useState<'inbox' | 'devices'>('inbox');
@@ -32,6 +34,7 @@ export const SyncInbox = () => {
     Array<{ name: string; address: string; score: number; isVirtual: boolean }>
   >([]);
   const [isPairModalOpen, setIsPairModalOpen] = useState(false);
+  const [isBleModalOpen, setIsBleModalOpen] = useState(false);
   const [pairSuccess, setPairSuccess] = useState<{ deviceName: string; timestamp: number } | null>(
     null
   );
@@ -560,15 +563,19 @@ export const SyncInbox = () => {
 
     if (item.type === 'ammo_adjustment') {
       const upcOrId = String(item.upcOrId);
-      const ammo = ammoList.find((a) => String(a.id) === upcOrId || a.upc_code === upcOrId);
+      const ammo = ammoList.find(
+        (a) => String(a.id) === upcOrId || a.upc_code === upcOrId || a.sku === upcOrId
+      );
       if (ammo) {
+        await ensureItemSku(ammo, 'ammo', window.api);
         if (item.measurement === 'rds' || item.measurement === 'lbs') {
           return finalizeApprove(item, ammo, 1);
         }
 
         let boxSize = 0;
-        if (ammo.upc_code && skus[ammo.upc_code] && skus[ammo.upc_code].count) {
-          boxSize = skus[ammo.upc_code].count;
+        const ammoIdentifier = ammo.upc_code || ammo.sku;
+        if (ammoIdentifier && skus[ammoIdentifier] && skus[ammoIdentifier].count) {
+          boxSize = skus[ammoIdentifier].count;
         }
 
         if (boxSize === 0) {
@@ -578,12 +585,12 @@ export const SyncInbox = () => {
               const parsed = parseBarcodeData(data.items[0], ammoList);
               if (parsed.parsedAmmo && parsed.parsedAmmo.count) {
                 boxSize = parsed.parsedAmmo.count;
-                if (ammo.upc_code) {
+                if (ammoIdentifier) {
                   const currentDbSkus =
                     window.api && window.api.getSkus ? await window.api.getSkus() : skus;
                   const newSkus = {
                     ...currentDbSkus,
-                    [ammo.upc_code]: { ...(currentDbSkus[ammo.upc_code] || {}), count: boxSize },
+                    [ammoIdentifier]: { ...(currentDbSkus[ammoIdentifier] || {}), count: boxSize },
                   };
                   await window.api.saveSkus(newSkus);
                   setSkus(newSkus);
@@ -607,9 +614,10 @@ export const SyncInbox = () => {
       }
       const upcOrId = String(item.upcOrId);
       const component = componentsList.find(
-        (c) => String(c.id) === upcOrId || c.upc_code === upcOrId
+        (c) => String(c.id) === upcOrId || c.upc_code === upcOrId || (c as any).sku === upcOrId
       );
       if (component) {
+        await ensureItemSku(component, 'component', window.api);
         if (item.measurement === 'rds' || item.measurement === 'lbs') {
           return finalizeApprove(item, component, 1);
         } else if (item.measurement === 'brick' || component.type === 'Primer') {
@@ -617,8 +625,9 @@ export const SyncInbox = () => {
         }
 
         let unitSize = 0;
-        if (component.upc_code && skus[component.upc_code] && skus[component.upc_code].count) {
-          unitSize = skus[component.upc_code].count;
+        const compIdentifier = component.upc_code || (component as any).sku;
+        if (compIdentifier && skus[compIdentifier] && skus[compIdentifier].count) {
+          unitSize = skus[compIdentifier].count;
         }
 
         if (unitSize === 0) {
@@ -628,13 +637,13 @@ export const SyncInbox = () => {
               const parsed = parseBarcodeData(data.items[0], ammoList);
               if (parsed.parsedComponent && parsed.parsedComponent.quantity) {
                 unitSize = parsed.parsedComponent.quantity;
-                if (component.upc_code) {
+                if (compIdentifier) {
                   const currentDbSkus =
                     window.api && window.api.getSkus ? await window.api.getSkus() : skus;
                   const newSkus = {
                     ...currentDbSkus,
-                    [component.upc_code]: {
-                      ...(currentDbSkus[component.upc_code] || {}),
+                    [compIdentifier]: {
+                      ...(currentDbSkus[compIdentifier] || {}),
                       count: unitSize,
                     },
                   };
@@ -663,9 +672,12 @@ export const SyncInbox = () => {
         (a: any) =>
           String(a.id) === upcOrId ||
           a.serialNumber === upcOrId ||
+          a.sku === upcOrId ||
+          a.upc === upcOrId ||
           (a.notes && a.notes.includes(upcOrId))
       );
       if (acc) {
+        await ensureItemSku(acc, 'accessory', window.api);
         const currentCount = parseInt(acc.quantity as any) || 0;
         const adjustment = parseInt(item.count as any) || 0;
         if (item.action === 'add') {
@@ -801,8 +813,90 @@ export const SyncInbox = () => {
       if (firearm && window.api && window.api.updateFirearm) {
         const logNote = `[Maintenance] ${item.notes || (item as any).service_type || 'Service performed'} on ${item.date || new Date().toLocaleDateString()}`;
         const updatedNotes = firearm.notes ? `${firearm.notes}\n${logNote}` : logNote;
-        await window.api.updateFirearm(fId, { ...firearm, notes: updatedNotes });
+        const newLog: any = {
+          id: Date.now(),
+          date: item.date || new Date(item.timestamp || Date.now()).toISOString().split('T')[0],
+          type: (item as any).service_type || 'Cleaning',
+          notes: item.notes || 'Service performed',
+          rounds_fired: parseInt((item as any).roundCount || (item as any).round_count) || 0,
+          round_count_at_service: Number(firearm.round_count) || 0,
+        };
+        const updatedLogs = [...(firearm.logs || []), newLog];
+        await window.api.updateFirearm(fId, { ...firearm, logs: updatedLogs, notes: updatedNotes });
       }
+      await window.api.removeSyncItem(item.id!);
+      loadData();
+    } else if (item.type === 'optic_zero_update') {
+      const data: any = item.data || item;
+      const opticId =
+        data.optic_id || data.opticId || (item as any).optic_id || (item as any).opticId;
+      const opticName =
+        data.optic_name ||
+        data.opticName ||
+        data.name ||
+        (item as any).optic_name ||
+        (item as any).opticName ||
+        'Optic';
+
+      const allAcc = window.api.getAccessories ? await window.api.getAccessories() : accessoriesList;
+      const acc = (allAcc || []).find(
+        (a: any) =>
+          (opticId && String(a.id) === String(opticId)) ||
+          (data.serialNumber &&
+            a.serialNumber &&
+            a.serialNumber.toLowerCase() === data.serialNumber.toLowerCase()) ||
+          (a.name && opticName && a.name.toLowerCase() === opticName.toLowerCase()) ||
+          (a.model && opticName && a.model.toLowerCase() === opticName.toLowerCase())
+      );
+
+      const zeroDistance =
+        data.zero_distance_yards ||
+        data.zero_distance ||
+        data.zeroDistance ||
+        (item as any).zero_distance_yards ||
+        (item as any).zero_distance ||
+        100;
+
+      const clickValue =
+        data.click_value || data.clickValue || (item as any).click_value || '1/4 MOA';
+
+      const dateStr =
+        data.date ||
+        data.last_zero_date ||
+        new Date(item.timestamp || Date.now()).toISOString().split('T')[0];
+
+      if (acc && acc.id !== undefined && window.api.updateAccessory) {
+        const zeroNote = `[Zero Update] ${zeroDistance} yds, ${clickValue} on ${dateStr}${data.notes ? ` - ${data.notes}` : ''}`;
+        const updatedNotes = acc.notes ? `${acc.notes}\n${zeroNote}` : zeroNote;
+        const updatedAcc = {
+          ...acc,
+          zeroDistance,
+          clickValue,
+          lastZeroDate: dateStr,
+          notes: updatedNotes,
+        };
+        await window.api.updateAccessory(acc.id, updatedAcc);
+      }
+
+      const fId = Number(
+        data.firearm_id || data.firearmId || (item as any).firearm_id || (item as any).firearmId
+      );
+      if (fId) {
+        const freshFirearms = await window.api.getFirearms();
+        const targetFirearm = (freshFirearms || []).find((f: any) => f.id === fId);
+        if (targetFirearm && targetFirearm.id !== undefined && window.api.updateFirearm) {
+          const newLog: any = {
+            id: Date.now(),
+            date: dateStr,
+            type: 'Maintenance',
+            notes: `Optic Zeroed: ${acc ? acc.name || acc.model : opticName} at ${zeroDistance} yds (${clickValue})${data.notes ? ` - ${data.notes}` : ''}`,
+            rounds_fired: 0,
+          };
+          const updatedLogs = [...(targetFirearm.logs || []), newLog];
+          await window.api.updateFirearm(targetFirearm.id, { ...targetFirearm, logs: updatedLogs });
+        }
+      }
+
       await window.api.removeSyncItem(item.id!);
       loadData();
     } else if (item.type === 'bill_of_sale_transfer') {
@@ -868,9 +962,10 @@ export const SyncInbox = () => {
       const caliber = data.caliber || '';
       const serial_number = data.serial_number || '';
 
+      const freshFirearms = await window.api.getFirearms();
       // Check if duplicate serial already exists
-      const existing = firearms.find(
-        (f) =>
+      const existing = (freshFirearms || []).find(
+        (f: any) =>
           serial_number &&
           f.serial_number &&
           f.serial_number.trim().toLowerCase() === serial_number.trim().toLowerCase()
@@ -892,16 +987,30 @@ export const SyncInbox = () => {
         if (savedPath) savedPhotos.push(savedPath);
       }
 
+      const { photosBase64: _pB64, photoBase64: _pOne, firearmId: _fId, id: _ignoreId, ...cleanData } = data;
+
       if (existing && existing.id !== undefined) {
+        const existingPhotos = existing.photos || [];
+        const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
         const updated = {
           ...existing,
-          ...data,
-          photos: [...(existing.photos || []), ...savedPhotos],
-          image_path: existing.image_path || (savedPhotos.length > 0 ? savedPhotos[0] : ''),
+          ...cleanData,
+          id: existing.id,
+          purchase_price:
+            cleanData.purchase_price !== undefined
+              ? parseCurrencyOrNull(cleanData.purchase_price)
+              : existing.purchase_price,
+          sold_price:
+            cleanData.sold_price !== undefined
+              ? parseCurrencyOrNull(cleanData.sold_price)
+              : existing.sold_price,
+          photos: mergedPhotos,
+          image_path: existing.image_path || (mergedPhotos.length > 0 ? mergedPhotos[0] : ''),
         };
         await window.api.updateFirearm(existing.id, updated);
       } else {
         const newFirearm: any = {
+          ...cleanData,
           make,
           model,
           serial_number,
@@ -939,11 +1048,12 @@ export const SyncInbox = () => {
       loadData();
     } else if (item.type === 'firearm_update') {
       const data: any = item.data || item;
-      const fId = Number(data.firearmId || (item as any).firearmId);
+      const fId = Number(data.firearmId || (item as any).firearmId || data.id);
       const serial_number = data.serial_number || '';
 
-      const firearm = firearms.find(
-        (f) =>
+      const freshFirearms = await window.api.getFirearms();
+      const firearm = (freshFirearms || []).find(
+        (f: any) =>
           (fId && f.id === fId) ||
           (serial_number &&
             f.serial_number &&
@@ -966,20 +1076,25 @@ export const SyncInbox = () => {
         if (savedPath) savedPhotos.push(savedPath);
       }
 
+      const { photosBase64: _pB64, photoBase64: _pOne, firearmId: _fId, id: _ignoreId, ...cleanData } = data;
+
       if (firearm && firearm.id !== undefined) {
+        const existingPhotos = firearm.photos || [];
+        const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
         const updated = {
           ...firearm,
-          ...data,
+          ...cleanData,
+          id: firearm.id, // Strictly preserve existing ID!
           purchase_price:
-            data.purchase_price !== undefined
-              ? parseCurrencyOrNull(data.purchase_price)
+            cleanData.purchase_price !== undefined
+              ? parseCurrencyOrNull(cleanData.purchase_price)
               : firearm.purchase_price,
           sold_price:
-            data.sold_price !== undefined
-              ? parseCurrencyOrNull(data.sold_price)
+            cleanData.sold_price !== undefined
+              ? parseCurrencyOrNull(cleanData.sold_price)
               : firearm.sold_price,
-          photos: [...(firearm.photos || []), ...savedPhotos],
-          image_path: firearm.image_path || (savedPhotos.length > 0 ? savedPhotos[0] : ''),
+          photos: mergedPhotos,
+          image_path: firearm.image_path || (mergedPhotos.length > 0 ? mergedPhotos[0] : ''),
         };
 
         await window.api.updateFirearm(firearm.id, updated);
@@ -997,6 +1112,7 @@ export const SyncInbox = () => {
       } else {
         // Fallback: If firearm not found in DB (e.g. temporary mobile ID was used), insert as new firearm
         const newFirearm: any = {
+          ...cleanData,
           make: data.make || 'Unknown Make',
           model: data.model || 'Unknown Model',
           serial_number: serial_number,
@@ -1045,16 +1161,18 @@ export const SyncInbox = () => {
     const currentAmmo = await window.api.getAmmo();
     const currentFirearms = await window.api.getFirearms();
     const currentComponents = window.api.getComponents ? await window.api.getComponents() : [];
+    const currentAccessories = window.api.getAccessories ? await window.api.getAccessories() : [];
     let processedAny = false;
 
     for (const item of queue) {
       if (item.type === 'ammo_adjustment') {
         const upcOrId = String(item.upcOrId);
         const ammoIndex = currentAmmo.findIndex(
-          (a) => String(a.id) === upcOrId || a.upc_code === upcOrId
+          (a) => String(a.id) === upcOrId || a.upc_code === upcOrId || a.sku === upcOrId
         );
         if (ammoIndex >= 0) {
           const ammo = currentAmmo[ammoIndex];
+          await ensureItemSku(ammo, 'ammo', window.api);
           const currentCount = parseInt(ammo.count as any) || 0;
           const adjustment = parseInt(item.count as any) || 0;
           if (item.action === 'add') {
@@ -1104,10 +1222,11 @@ export const SyncInbox = () => {
         }
         const upcOrId = String(item.upcOrId);
         const compIndex = currentComponents.findIndex(
-          (c) => String(c.id) === upcOrId || c.upc_code === upcOrId
+          (c) => String(c.id) === upcOrId || c.upc_code === upcOrId || (c as any).sku === upcOrId
         );
         if (compIndex >= 0) {
           const component = currentComponents[compIndex];
+          await ensureItemSku(component, 'component', window.api);
           const currentCount = parseInt(component.quantity as any) || 0;
           const adjustment = parseInt(item.count as any) || 0;
           if (item.action === 'add') {
@@ -1122,15 +1241,17 @@ export const SyncInbox = () => {
         }
       } else if (item.type === 'accessory_adjustment') {
         const upcOrId = String(item.upcOrId);
-        const currentAcc = window.api.getAccessories ? await window.api.getAccessories() : [];
-        const accIndex = currentAcc.findIndex(
+        const accIndex = currentAccessories.findIndex(
           (a: any) =>
             String(a.id) === upcOrId ||
             a.serialNumber === upcOrId ||
+            a.sku === upcOrId ||
+            a.upc === upcOrId ||
             (a.notes && a.notes.includes(upcOrId))
         );
         if (accIndex >= 0) {
-          const acc = currentAcc[accIndex];
+          const acc = currentAccessories[accIndex];
+          await ensureItemSku(acc, 'accessory', window.api);
           const currentCount = parseInt(acc.quantity as any) || 0;
           const adjustment = parseInt(item.count as any) || 0;
           if (item.action === 'add') {
@@ -1139,6 +1260,7 @@ export const SyncInbox = () => {
             acc.quantity = Math.max(0, currentCount - adjustment);
           }
           await window.api.updateAccessory(acc.id!, acc);
+          currentAccessories[accIndex] = acc;
           await window.api.removeSyncItem(item.id!);
           processedAny = true;
         }
@@ -1224,18 +1346,32 @@ export const SyncInbox = () => {
           if (savedPath) savedPhotos.push(savedPath);
         }
 
+        const { photosBase64: _pB64, photoBase64: _pOne, firearmId: _fId, id: _ignoreId, ...cleanData } = data;
+
         if (existing && existing.id !== undefined) {
+          const existingPhotos = existing.photos || [];
+          const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
           const updated = {
             ...existing,
-            ...data,
-            photos: [...(existing.photos || []), ...savedPhotos],
-            image_path: existing.image_path || (savedPhotos.length > 0 ? savedPhotos[0] : ''),
+            ...cleanData,
+            id: existing.id,
+            purchase_price:
+              cleanData.purchase_price !== undefined
+                ? parseCurrencyOrNull(cleanData.purchase_price)
+                : existing.purchase_price,
+            sold_price:
+              cleanData.sold_price !== undefined
+                ? parseCurrencyOrNull(cleanData.sold_price)
+                : existing.sold_price,
+            photos: mergedPhotos,
+            image_path: existing.image_path || (mergedPhotos.length > 0 ? mergedPhotos[0] : ''),
           };
           await window.api.updateFirearm(existing.id, updated);
           const idx = currentFirearms.findIndex((f) => f.id === existing.id);
           if (idx >= 0) currentFirearms[idx] = updated;
         } else {
           const newFirearm: any = {
+            ...cleanData,
             make,
             model,
             serial_number,
@@ -1275,7 +1411,7 @@ export const SyncInbox = () => {
         processedAny = true;
       } else if (item.type === 'firearm_update') {
         const data: any = item.data || item;
-        const fId = Number(data.firearmId || (item as any).firearmId);
+        const fId = Number(data.firearmId || (item as any).firearmId || data.id);
         const serial_number = data.serial_number || '';
 
         const firearm = currentFirearms.find(
@@ -1302,20 +1438,25 @@ export const SyncInbox = () => {
           if (savedPath) savedPhotos.push(savedPath);
         }
 
+        const { photosBase64: _pB64, photoBase64: _pOne, firearmId: _fId, id: _ignoreId, ...cleanData } = data;
+
         if (firearm && firearm.id !== undefined) {
+          const existingPhotos = firearm.photos || [];
+          const mergedPhotos = Array.from(new Set([...existingPhotos, ...savedPhotos]));
           const updated = {
             ...firearm,
-            ...data,
+            ...cleanData,
+            id: firearm.id, // Strictly preserve existing ID!
             purchase_price:
-              data.purchase_price !== undefined
-                ? parseCurrencyOrNull(data.purchase_price)
+              cleanData.purchase_price !== undefined
+                ? parseCurrencyOrNull(cleanData.purchase_price)
                 : firearm.purchase_price,
             sold_price:
-              data.sold_price !== undefined
-                ? parseCurrencyOrNull(data.sold_price)
+              cleanData.sold_price !== undefined
+                ? parseCurrencyOrNull(cleanData.sold_price)
                 : firearm.sold_price,
-            photos: [...(firearm.photos || []), ...savedPhotos],
-            image_path: firearm.image_path || (savedPhotos.length > 0 ? savedPhotos[0] : ''),
+            photos: mergedPhotos,
+            image_path: firearm.image_path || (mergedPhotos.length > 0 ? mergedPhotos[0] : ''),
           };
 
           await window.api.updateFirearm(firearm.id, updated);
@@ -1335,6 +1476,7 @@ export const SyncInbox = () => {
         } else {
           // Fallback: If firearm not found in DB (e.g. temporary mobile ID was used), insert as new firearm
           const newFirearm: any = {
+            ...cleanData,
             make: data.make || 'Unknown Make',
             model: data.model || 'Unknown Model',
             serial_number: serial_number,
@@ -1420,6 +1562,108 @@ export const SyncInbox = () => {
           const idx = currentFirearms.findIndex((f) => f.id === firearm.id);
           if (idx >= 0) currentFirearms[idx] = updatedFirearm;
         }
+        await window.api.removeSyncItem(item.id!);
+        processedAny = true;
+      } else if (item.type === 'firearm_maintenance') {
+        const fId = Number(item.firearm_id);
+        const firearm = currentFirearms.find((f) => f.id === fId);
+        if (firearm && firearm.id !== undefined && window.api && window.api.updateFirearm) {
+          const logNote = `[Maintenance] ${item.notes || (item as any).service_type || 'Service performed'} on ${item.date || new Date().toLocaleDateString()}`;
+          const updatedNotes = firearm.notes ? `${firearm.notes}\n${logNote}` : logNote;
+          const newLog: any = {
+            id: Date.now() + Math.random(),
+            date: item.date || new Date(item.timestamp || Date.now()).toISOString().split('T')[0],
+            type: (item as any).service_type || 'Cleaning',
+            notes: item.notes || 'Service performed',
+            rounds_fired: parseInt((item as any).roundCount || (item as any).round_count) || 0,
+            round_count_at_service: Number(firearm.round_count) || 0,
+          };
+          const updatedLogs = [...(firearm.logs || []), newLog];
+          const updatedFirearm = { ...firearm, logs: updatedLogs, notes: updatedNotes };
+          await window.api.updateFirearm(firearm.id, updatedFirearm);
+          const idx = currentFirearms.findIndex((f) => f.id === firearm.id);
+          if (idx >= 0) currentFirearms[idx] = updatedFirearm;
+        }
+        await window.api.removeSyncItem(item.id!);
+        processedAny = true;
+      } else if (item.type === 'optic_zero_update') {
+        const data: any = item.data || item;
+        const opticId =
+          data.optic_id || data.opticId || (item as any).optic_id || (item as any).opticId;
+        const opticName =
+          data.optic_name ||
+          data.opticName ||
+          data.name ||
+          (item as any).optic_name ||
+          (item as any).opticName ||
+          'Optic';
+
+        const accIndex = currentAccessories.findIndex(
+          (a: any) =>
+            (opticId && String(a.id) === String(opticId)) ||
+            (data.serialNumber &&
+              a.serialNumber &&
+              a.serialNumber.toLowerCase() === data.serialNumber.toLowerCase()) ||
+            (a.name && opticName && a.name.toLowerCase() === opticName.toLowerCase()) ||
+            (a.model && opticName && a.model.toLowerCase() === opticName.toLowerCase())
+        );
+
+        const zeroDistance =
+          data.zero_distance_yards ||
+          data.zero_distance ||
+          data.zeroDistance ||
+          (item as any).zero_distance_yards ||
+          (item as any).zero_distance ||
+          100;
+
+        const clickValue =
+          data.click_value || data.clickValue || (item as any).click_value || '1/4 MOA';
+
+        const dateStr =
+          data.date ||
+          data.last_zero_date ||
+          new Date(item.timestamp || Date.now()).toISOString().split('T')[0];
+
+        if (accIndex >= 0 && window.api && window.api.updateAccessory) {
+          const acc = currentAccessories[accIndex];
+          if (acc && acc.id !== undefined) {
+            const zeroNote = `[Zero Update] ${zeroDistance} yds, ${clickValue} on ${dateStr}${data.notes ? ` - ${data.notes}` : ''}`;
+            const updatedNotes = acc.notes ? `${acc.notes}\n${zeroNote}` : zeroNote;
+            const updatedAcc = {
+              ...acc,
+              zeroDistance,
+              clickValue,
+              lastZeroDate: dateStr,
+              notes: updatedNotes,
+            };
+            await window.api.updateAccessory(acc.id, updatedAcc);
+            currentAccessories[accIndex] = updatedAcc;
+          }
+        }
+
+        const fId = Number(
+          data.firearm_id || data.firearmId || (item as any).firearm_id || (item as any).firearmId
+        );
+        if (fId) {
+          const firearmIndex = currentFirearms.findIndex((f) => f.id === fId);
+          if (firearmIndex >= 0 && window.api && window.api.updateFirearm) {
+            const firearm = currentFirearms[firearmIndex];
+            if (firearm && firearm.id !== undefined) {
+              const newLog: any = {
+                id: Date.now() + Math.random(),
+                date: dateStr,
+                type: 'Maintenance',
+                notes: `Optic Zeroed: ${opticName || 'Optic'} at ${zeroDistance} yds (${clickValue})${data.notes ? ` - ${data.notes}` : ''}`,
+                rounds_fired: 0,
+              };
+              const updatedLogs = [...(firearm.logs || []), newLog];
+              const updatedFirearm = { ...firearm, logs: updatedLogs };
+              await window.api.updateFirearm(firearm.id, updatedFirearm);
+              currentFirearms[firearmIndex] = updatedFirearm;
+            }
+          }
+        }
+
         await window.api.removeSyncItem(item.id!);
         processedAny = true;
       } else if (item.type === 'range_session') {
@@ -1718,6 +1962,16 @@ export const SyncInbox = () => {
         >
           <Smartphone size={16} /> Pair Device (QR)
         </button>
+        <button
+          className="btn-secondary"
+          onClick={() => {
+            setIsBleModalOpen(true);
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}
+          title="Pair nearby mobile companion using Bluetooth Low Energy"
+        >
+          <Bluetooth size={16} /> Pair via Bluetooth
+        </button>
       </div>
 
       {/* Auto-Disappearing Pair Success Toast Notification */}
@@ -1732,6 +1986,13 @@ export const SyncInbox = () => {
         onClose={() => setIsPairModalOpen(false)}
         onSelectIp={(ip) => generateQr(ip)}
         onTestPair={(name) => handlePairSuccess(name)}
+      />
+
+      {/* Dedicated Bluetooth LE Pairing Modal */}
+      <BlePairingModal
+        isOpen={isBleModalOpen}
+        onClose={() => setIsBleModalOpen(false)}
+        onSuccess={(name) => handlePairSuccess(name)}
       />
 
       {activeTab === 'inbox' && (
@@ -1812,6 +2073,7 @@ export const SyncInbox = () => {
                     ammoList={ammoList}
                     firearms={firearms}
                     componentsList={componentsList}
+                    accessoriesList={accessoriesList}
                     isReloadingInstalled={isInstalled('reloading')}
                     isResolving={isResolving === item.id}
                     onApprove={handleApprove}

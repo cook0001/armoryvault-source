@@ -1,7 +1,7 @@
 use crate::commands::vault_commands::AppState;
 use crate::storage::InventoryStore;
 use axum::{
-    extract::{Json, Query, State},
+    extract::{DefaultBodyLimit, Json, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post},
@@ -41,6 +41,7 @@ impl CompanionServer {
             .route("/api/inventory/cache", get(handle_cache))
             .route("/api/sync", post(handle_sync))
             .route("/api/sync/payloads", post(handle_sync_payloads))
+            .route("/api/sync/queue", get(handle_get_sync_queue))
             .route("/api/sync/rejected", get(handle_get_rejected_syncs))
             .route("/api/sync/rejected/confirm", post(handle_confirm_rejected_syncs))
             .route("/api/modules", get(handle_modules))
@@ -48,6 +49,7 @@ impl CompanionServer {
             .route("/api/chrono", post(handle_chrono))
             .route("/api/target-analysis", post(handle_target_analysis))
             .route("/api/ballistic-profiles", get(handle_ballistic_profiles))
+            .layer(DefaultBodyLimit::max(100 * 1024 * 1024))
             .layer(cors)
             .with_state(state);
 
@@ -254,8 +256,8 @@ fn maybe_decrypt_request_payload(
             candidate_keys.push(st.clone());
         }
     }
-    // Also load all paired device keys from SQLite
-    if let Ok(dev_keys) = app_state.with_db(|conn| crate::storage::InventoryStore::get_paired_device_keys(conn).map_err(|e| e.to_string())) {
+    // Also load all paired device tokens and keys from SQLite
+    if let Ok(dev_keys) = app_state.with_db(|conn| crate::storage::InventoryStore::get_all_paired_decryption_keys(conn).map_err(|e| e.to_string())) {
         for dk in dev_keys {
             if !candidate_keys.contains(&dk) {
                 candidate_keys.push(dk);
@@ -396,7 +398,7 @@ async fn handle_pair(
 
     // Persist to paired_devices SQLite registry and determine if newly registered
     let is_new = app_state
-        .with_db(|conn| {
+        .with_db_mut(|conn| {
             crate::storage::InventoryStore::upsert_paired_device(
                 conn,
                 &device_id,
@@ -409,6 +411,10 @@ async fn handle_pair(
             .map_err(|e| e.to_string())
         })
         .unwrap_or(false);
+
+    if let Err(e) = app_state.flush_vault() {
+        eprintln!("[CompanionServer] Warning: Failed to flush vault after device pair: {}", e);
+    }
 
     let _ = state.app_handle.emit(
         "device-paired",
@@ -464,16 +470,30 @@ async fn handle_pair_get(
     let device_id = get_or_create_device_id(&device_name, &device_type);
 
     let _ = app_state.with_db(|conn| {
-        crate::storage::InventoryStore::upsert_paired_device(
-            conn,
-            &device_id,
-            &device_name,
-            &device_type,
-            &client_ip,
-            Some(&server_token),
-            None,
-        )
-        .map_err(|e| e.to_string())
+        let is_already_paired: bool = conn
+            .query_row(
+                "SELECT 1 FROM paired_devices WHERE id = ?1",
+                rusqlite::params![device_id],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+
+        if is_already_paired {
+            crate::storage::InventoryStore::update_paired_device_activity(conn, &device_id, Some(&client_ip))
+                .map_err(|e| e.to_string())
+        } else {
+            crate::storage::InventoryStore::upsert_paired_device(
+                conn,
+                &device_id,
+                &device_name,
+                &device_type,
+                &client_ip,
+                Some(&server_token),
+                None,
+            )
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        }
     });
 
     // NOTE: Do not emit "device-paired" on GET /api/pair. GET is an idempotent status check.
@@ -516,6 +536,7 @@ async fn handle_delete_device(
     let app_state = state.app_handle.state::<AppState>();
     match app_state.with_db(|conn| crate::storage::InventoryStore::remove_paired_device(conn, &id).map_err(|e| e.to_string())) {
         Ok(removed) => {
+            let _ = app_state.flush_vault();
             let _ = state.app_handle.emit("device-unpaired", json!({ "id": id }));
             (StatusCode::OK, Json(json!({ "success": true, "removed": removed })))
         }
@@ -532,6 +553,7 @@ async fn handle_unpair_all_devices(
     let app_state = state.app_handle.state::<AppState>();
     match app_state.with_db(|conn| crate::storage::InventoryStore::unpair_all_devices(conn).map_err(|e| e.to_string())) {
         Ok(cleared) => {
+            let _ = app_state.flush_vault();
             let _ = state.app_handle.emit("device-unpaired-all", json!({}));
             (StatusCode::OK, Json(json!({ "success": true, "cleared": cleared })))
         }
@@ -544,6 +566,10 @@ async fn handle_unpair_all_devices(
 
 async fn handle_vault_lock(State(state): State<ServerState>) -> impl IntoResponse {
     let app_state = state.app_handle.state::<AppState>();
+    if let Err(e) = app_state.flush_vault() {
+        eprintln!("[CompanionServer] Warning: Failed to flush vault before locking: {}", e);
+    }
+
     if let Ok(mut db_guard) = app_state.db.lock() {
         *db_guard = None;
     }
@@ -927,6 +953,8 @@ async fn handle_sync(
         );
     }
 
+    let _ = app_state.flush_vault();
+
     // Emit live event to UI
     let _ = state.app_handle.emit("sync-received", json!({ "processed": processed, "skipped": skipped }));
     let _ = state.app_handle.emit("sync-queue-changed", json!({ "action": "received", "processed": processed }));
@@ -977,6 +1005,37 @@ async fn handle_sync_payloads(
         }
     };
 
+    let client_token = extract_token(&headers, &query, payload.get("token").and_then(|v| v.as_str()));
+    let server_token = {
+        let mut pt_guard = app_state.pairing_token.lock().unwrap();
+        if pt_guard.is_none() {
+            let token_from_db = app_state
+                .with_db(|conn| crate::storage::InventoryStore::get_or_create_vault_token(conn).map_err(|e| e.to_string()))
+                .ok();
+            if let Some(t) = token_from_db {
+                *pt_guard = Some(t);
+            }
+        }
+        pt_guard.clone()
+    };
+
+    let mut candidate_keys: Vec<String> = Vec::new();
+    if let Some(ref ct) = client_token {
+        candidate_keys.push(ct.clone());
+    }
+    if let Some(ref st) = server_token {
+        if !candidate_keys.contains(st) {
+            candidate_keys.push(st.clone());
+        }
+    }
+    if let Ok(dev_keys) = app_state.with_db(|conn| crate::storage::InventoryStore::get_all_paired_decryption_keys(conn).map_err(|e| e.to_string())) {
+        for dk in dev_keys {
+            if !candidate_keys.contains(&dk) {
+                candidate_keys.push(dk);
+            }
+        }
+    }
+
     let mut processed = 0;
     let mut skipped = 0;
     let mut processed_filenames = Vec::new();
@@ -989,16 +1048,164 @@ async fn handle_sync_payloads(
             let extension = item.get("extension").and_then(|v| v.as_str()).unwrap_or("avbundle");
             let envelope = item.get("envelope").cloned().unwrap_or(Value::Null);
 
+            // Attempt automatic decryption and unwrapping
+            let mut unwrapped_item: Option<Value> = None;
+            if envelope.get("format").and_then(|v| v.as_str()) == Some("armoryvault_encrypted_payload") {
+                for key in &candidate_keys {
+                    if let Ok(decrypted_json_str) = crate::crypto::vault::decrypt_with_token(&envelope, key) {
+                        if let Ok(val) = serde_json::from_str::<Value>(&decrypted_json_str) {
+                            unwrapped_item = Some(val);
+                            break;
+                        }
+                    }
+                }
+            } else if envelope.is_object() && (envelope.get("type").is_some() || envelope.get("format").is_some()) {
+                unwrapped_item = Some(envelope.clone());
+            }
+
+            let was_unwrapped = unwrapped_item.is_some();
             let id = hex::encode(rand::random::<[u8; 8]>());
-            let item_wrapper = json!({
-                "type": "custom_payload",
-                "custom_payload_filename": filename,
-                "custom_payload_extension": extension,
-                "custom_payload_envelope": envelope,
-                "device": device_name.clone(),
-                "received_at": now
-            });
-            let payload_str = serde_json::to_string(&item_wrapper).unwrap_or_default();
+            let final_payload_val = if let Some(mut unwrapped) = unwrapped_item {
+                // If it's a recognized native sync event or standardized payload format:
+                if unwrapped.get("type").and_then(|v| v.as_str()).is_some() {
+                    if let Some(obj) = unwrapped.as_object_mut() {
+                        if !obj.contains_key("device") {
+                            obj.insert("device".to_string(), Value::String(device_name.clone()));
+                        }
+                        if !obj.contains_key("received_at") {
+                            obj.insert("received_at".to_string(), Value::Number(now.into()));
+                        }
+                        if !obj.contains_key("timestamp") {
+                            obj.insert("timestamp".to_string(), Value::Number(now.into()));
+                        }
+                        obj.insert("source_filename".to_string(), Value::String(filename.to_string()));
+                    }
+                    unwrapped
+                } else if let Some(fmt) = unwrapped.get("format").and_then(|v| v.as_str()) {
+                    match fmt {
+                        "armoryvault_firearm" => {
+                            let f_data = unwrapped.get("firearm").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "firearm_update",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": f_data
+                            })
+                        }
+                        "armoryvault_range_session" => {
+                            let s_data = unwrapped.get("session").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "range_session",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": s_data
+                            })
+                        }
+                        "armoryvault_ammo" => {
+                            let a_data = unwrapped.get("ammo").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "ammo_adjustment",
+                                "action": "add",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": a_data
+                            })
+                        }
+                        "armoryvault_reloading_component" | "armoryvault_component" => {
+                            let c_data = unwrapped.get("component").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "component_adjustment",
+                                "action": "add",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": c_data
+                            })
+                        }
+                        "armoryvault_accessory" => {
+                            let acc_data = unwrapped.get("accessory").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "accessory_adjustment",
+                                "action": "add",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": acc_data
+                            })
+                        }
+                        "armoryvault_maintenance" => {
+                            let m_data = unwrapped.get("maintenance").cloned().unwrap_or(unwrapped.clone());
+                            json!({
+                                "type": "firearm_maintenance",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": m_data
+                            })
+                        }
+                        "armoryvault_transfer" => {
+                            json!({
+                                "type": "bill_of_sale_transfer",
+                                "device": device_name.clone(),
+                                "received_at": now,
+                                "timestamp": now,
+                                "source_filename": filename,
+                                "data": unwrapped
+                            })
+                        }
+                        _ => {
+                            json!({
+                                "type": "custom_payload",
+                                "custom_payload_filename": filename,
+                                "custom_payload_extension": extension,
+                                "custom_payload_envelope": envelope,
+                                "custom_payload_data": unwrapped,
+                                "device": device_name.clone(),
+                                "received_at": now
+                            })
+                        }
+                    }
+                } else if unwrapped.get("make").is_some() || unwrapped.get("model").is_some() || unwrapped.get("serial_number").is_some() {
+                    json!({
+                        "type": "firearm_update",
+                        "device": device_name.clone(),
+                        "received_at": now,
+                        "timestamp": now,
+                        "source_filename": filename,
+                        "data": unwrapped
+                    })
+                } else {
+                    json!({
+                        "type": "custom_payload",
+                        "custom_payload_filename": filename,
+                        "custom_payload_extension": extension,
+                        "custom_payload_envelope": envelope,
+                        "custom_payload_data": unwrapped,
+                        "device": device_name.clone(),
+                        "received_at": now
+                    })
+                }
+            } else {
+                json!({
+                    "type": "custom_payload",
+                    "custom_payload_filename": filename,
+                    "custom_payload_extension": extension,
+                    "custom_payload_envelope": envelope,
+                    "device": device_name.clone(),
+                    "received_at": now
+                })
+            };
+
+            let payload_str = serde_json::to_string(&final_payload_val).unwrap_or_default();
             let insert_res = conn.execute(
                 "INSERT INTO sync_queue (id, payload, created_at) VALUES (?1, ?2, ?3)",
                 rusqlite::params![id, payload_str, now],
@@ -1006,14 +1213,21 @@ async fn handle_sync_payloads(
 
             if insert_res.is_ok() {
                 processed += 1;
-                processed_filenames.push(filename.to_string());
+                if was_unwrapped {
+                    processed_filenames.push(filename.to_string());
+                } else {
+                    eprintln!(
+                        "[CompanionServer] Warning: Payload '{}' stored encrypted in queue but not auto-unwrapped; keeping on device without shred confirmation",
+                        filename
+                    );
+                }
                 let _ = state.app_handle.emit(
                     "payload-received",
                     json!({
                         "id": id,
                         "filename": filename,
                         "extension": extension,
-                        "envelope": envelope,
+                        "unwrapped": was_unwrapped,
                         "device": device_name.clone()
                     }),
                 );
@@ -1027,9 +1241,11 @@ async fn handle_sync_payloads(
     if sync_res.is_err() {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "success": false, "error": "Failed writing custom payloads to sync queue (vault locked?)" })),
+            Json(json!({ "success": false, "error": "Failed writing payloads to sync queue (vault locked?)" })),
         );
     }
+
+    let _ = app_state.flush_vault();
 
     let _ = state.app_handle.emit(
         "sync-received",
@@ -1047,6 +1263,31 @@ async fn handle_sync_payloads(
             "processed": processed,
             "skipped": skipped,
             "processedFilenames": processed_filenames
+        })),
+    )
+}
+
+async fn handle_get_sync_queue(
+    State(state): State<ServerState>,
+) -> impl IntoResponse {
+    let app_state = state.app_handle.state::<AppState>();
+    if app_state.is_locked() {
+        return (
+            StatusCode::OK,
+            Json(json!({ "success": false, "isLocked": true, "items": [] })),
+        );
+    }
+
+    let items = app_state
+        .with_db(|conn| crate::storage::InventoryStore::get_sync_queue(conn).map_err(|e| e.to_string()))
+        .unwrap_or_default();
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "count": items.len(),
+            "items": items
         })),
     )
 }

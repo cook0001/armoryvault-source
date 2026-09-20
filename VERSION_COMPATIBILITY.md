@@ -1,10 +1,10 @@
-# ArmoryVault Ecosystem — Version Compatibility Guide 🛡️📱
+# ArmoryVault Ecosystem — Version Compatibility Guide 
 
 This document defines the interoperability specifications, local Wi-Fi synchronization protocols, API endpoint contracts, and release channel mappings between the **ArmoryVault Desktop Application** and the **ArmoryVault Companion Mobile Application**.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 1. [Architecture Overview](#-architecture-overview)
 2. [Unified Release Strategy](#-unified-release-strategy)
@@ -16,7 +16,7 @@ This document defines the interoperability specifications, local Wi-Fi synchroni
 
 ---
 
-## 🏛️ Architecture Overview
+## Architecture Overview
 
 The ArmoryVault platform operates on a **Local-First, Zero-Cloud P2P Model**:
 
@@ -42,7 +42,7 @@ The ArmoryVault platform operates on a **Local-First, Zero-Cloud P2P Model**:
 
 ---
 
-## 🏷️ Unified Release Strategy
+## Unified Release Strategy
 
 The ArmoryVault ecosystem uses a single, unified release stream for both Desktop and Mobile applications:
 
@@ -53,18 +53,18 @@ The ArmoryVault ecosystem uses a single, unified release stream for both Desktop
 
 ---
 
-## 📊 Master Version Compatibility Matrix
+## Master Version Compatibility Matrix
 
 | Desktop Version | Mobile Version | Compatibility Status | Supported Capabilities |
 | :--- | :--- | :---: | :--- |
-| **`v2.9.x`** *(Current)* | **`v2.7.x`** *(Current)* | ⭐️ **Full (100%)** | • Pluggable Module Architecture & Module Center<br>• Full Inventory Sync (Firearms, Ammo, Components, Accessories)<br>• Zero-Crash Sync Fallbacks for Uninstalled Modules<br>• Mobile Chronograph velocity strings (`/api/chrono`)<br>• Target & Grouping Analysis sync (`/api/target-analysis`)<br>• Safe & Storage Location sync (`/api/storage-locations`)<br>• Ballistic DOPE Profiles sync (`/api/ballistic-profiles`)<br>• Real-time Pairing QR & Remote Vault Lock<br>• Mobile Firearm Intake & Photo Upload |
-| **`v2.8.x`** | **`v2.7.x`** | ⭐️ **Full (100%)** | • Full Inventory Sync (Firearms, Ammo, Components, Accessories)<br>• Mobile Chronograph velocity strings (`/api/chrono`)<br>• Target & Grouping Analysis sync (`/api/target-analysis`)<br>• Safe & Storage Location sync (`/api/storage-locations`)<br>• Ballistic DOPE Profiles sync (`/api/ballistic-profiles`)<br>• Real-time Pairing QR & Remote Vault Lock<br>• Mobile Firearm Intake & Photo Upload |
-| **`v2.7.x`** | **`v2.6.x` / `v2.5.x`** | ⭐️ **Full (Core Sync)** | • Core Local Wi-Fi Pairing & Ping<br>• Complete Inventory Caching & Summary views<br>• Range Sessions, Outbox Sync & Bill of Sale exports |
-| **`v2.4.x` and older** | Any | ❌ **Unsupported** | • Legacy format before encrypted auth tokens. Upgrading is required. |
+| **`v2.9.x`** *(Current)* | **`v2.7.x`** *(Current)* |  **Full (100%)** | • Pluggable Module Architecture & Module Center<br>• Full Inventory Sync (Firearms, Ammo, Components, Accessories)<br>• Zero-Crash Sync Fallbacks for Uninstalled Modules<br>• Mobile Chronograph velocity strings (`/api/chrono`)<br>• Target & Grouping Analysis sync (`/api/target-analysis`)<br>• Safe & Storage Location sync (`/api/storage-locations`)<br>• Ballistic DOPE Profiles sync (`/api/ballistic-profiles`)<br>• Real-time Pairing QR & Remote Vault Lock<br>• Mobile Firearm Intake & Photo Upload |
+| **`v2.8.x`** | **`v2.7.x`** |  **Full (100%)** | • Full Inventory Sync (Firearms, Ammo, Components, Accessories)<br>• Mobile Chronograph velocity strings (`/api/chrono`)<br>• Target & Grouping Analysis sync (`/api/target-analysis`)<br>• Safe & Storage Location sync (`/api/storage-locations`)<br>• Ballistic DOPE Profiles sync (`/api/ballistic-profiles`)<br>• Real-time Pairing QR & Remote Vault Lock<br>• Mobile Firearm Intake & Photo Upload |
+| **`v2.7.x`** | **`v2.6.x` / `v2.5.x`** |  **Full (Core Sync)** | • Core Local Wi-Fi Pairing & Ping<br>• Complete Inventory Caching & Summary views<br>• Range Sessions, Outbox Sync & Bill of Sale exports |
+| **`v2.4.x` and older** | Any | [Unsupported] **Unsupported** | • Legacy format before encrypted auth tokens. Upgrading is required. |
 
 ---
 
-## 🌐 Local Wi-Fi API Endpoint Contract
+## Local Wi-Fi API Endpoint Contract
 
 The Desktop application exposes the following REST endpoints on local port `3456`:
 
@@ -84,7 +84,7 @@ The Desktop application exposes the following REST endpoints on local port `3456
 
 ---
 
-## 🔄 Forward & Backward Compatibility Rules
+## Forward & Backward Compatibility Rules
 
 1. **Non-Destructive Schema Parsing**:
    - The Desktop server ignores unrecognized JSON fields sent by newer mobile versions, storing raw payloads in the sync log without throwing runtime exceptions.
@@ -95,7 +95,7 @@ The Desktop application exposes the following REST endpoints on local port `3456
 
 ---
 
-## 🤖 Android Native VersionCode Protocol
+## Android Native VersionCode Protocol
 
 ### Android Operating System Invariant
 
@@ -110,7 +110,7 @@ Android's system `PackageManager` strictly prohibits **in-place version downgrad
 
 ---
 
-## 🎯 Recommended Deployment Configuration
+## Recommended Deployment Configuration
 
 - **Desktop**: `v2.9.0` (Unified Production Release)
 - **Mobile**: `v2.7.10` (Unified Production Release, `versionCode 319`)

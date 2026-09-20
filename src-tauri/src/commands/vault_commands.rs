@@ -380,6 +380,12 @@ pub fn regenerate_recovery_key(current_password: String, state: State<AppState>)
 
 #[tauri::command]
 pub fn lock_vault(state: State<AppState>) -> Result<(), String> {
+    // Flush all in-memory database tables (including paired_devices, sync_queue, kv_meta)
+    // to firearms_inventory.enc BEFORE dropping in-memory database!
+    if let Err(e) = state.flush_vault() {
+        eprintln!("[Vault] Warning: Failed to flush vault before locking: {}", e);
+    }
+
     // Drop in-memory database connection and pairing token immediately to zero memory
     if let Ok(mut db_guard) = state.db.lock() {
         *db_guard = None;

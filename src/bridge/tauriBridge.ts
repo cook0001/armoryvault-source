@@ -938,8 +938,15 @@ export async function setupDesktopBridge(): Promise<void> {
       checkRemoteModules: async () => {
         try {
           const catalogUrl =
-            'https://raw.githubusercontent.com/cook0001/ArmoryVault-Modules/main/modules-index.json';
-          const res = await fetch(catalogUrl, { cache: 'no-cache' });
+            'https://armstrader.store/armoryvault/modules/modules-index.json';
+          let res = await fetch(catalogUrl, { cache: 'no-cache' });
+          if (!res.ok) {
+            // Secondary fallback
+            res = await fetch(
+              'https://raw.githubusercontent.com/cook0001/ArmoryVault-Modules/main/modules-index.json',
+              { cache: 'no-cache' }
+            );
+          }
           if (res.ok) {
             const data = await res.json();
             return {
@@ -1066,6 +1073,32 @@ export async function setupDesktopBridge(): Promise<void> {
           return await invoke<boolean>('revoke_pairing_token');
         } catch {
           return false;
+        }
+      },
+
+      // Bluetooth LE Pairing
+      isBluetoothAvailable: async () => {
+        try {
+          return await invoke<boolean>('is_bluetooth_available');
+        } catch (err) {
+          console.warn('[TauriBridge] is_bluetooth_available error:', err);
+          return false;
+        }
+      },
+      scanBleCompanions: async (timeoutSecs?: number) => {
+        try {
+          return await invoke<any[]>('scan_ble_companions', { timeoutSecs });
+        } catch (err) {
+          console.error('[TauriBridge] scan_ble_companions error:', err);
+          return [];
+        }
+      },
+      pairBleCompanion: async (peripheralId: string, pin: string) => {
+        try {
+          return await invoke<any>('pair_ble_companion', { peripheralId, pin });
+        } catch (err) {
+          console.error('[TauriBridge] pair_ble_companion error:', err);
+          throw err;
         }
       },
 

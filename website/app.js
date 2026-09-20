@@ -61,11 +61,12 @@ function initOsDetection() {
   const platform = navigator.platform?.toLowerCase() || '';
 
   let detectedCardId = 'download-windows';
-  let targetUrl = 'https://github.com/cook0001/ArmoryVault/releases/latest';
+  let targetUrl = '/downloads/desktop/ArmoryVault-Windows-x64-Setup.exe';
   let btnLabel = 'Download for Windows (.exe)';
 
   if (ua.includes('mac') || platform.includes('mac')) {
     detectedCardId = 'download-mac-arm';
+    targetUrl = '/downloads/desktop/ArmoryVault-macOS-arm64.dmg';
     btnLabel = 'Download for macOS (Apple Silicon)';
     // Check for Apple Silicon vs Intel
     if (navigator.userAgentData) {
@@ -74,6 +75,7 @@ function initOsDetection() {
         .then((data) => {
           if (data.architecture === 'x86') {
             detectedCardId = 'download-mac-intel';
+            targetUrl = '/downloads/desktop/ArmoryVault-macOS-x64.dmg';
             btnLabel = 'Download for macOS (Intel x64)';
           }
           applyDetection(detectedCardId, btnLabel, targetUrl);
@@ -83,11 +85,11 @@ function initOsDetection() {
     }
   } else if (ua.includes('linux') || platform.includes('linux')) {
     detectedCardId = 'download-linux';
+    targetUrl = '/downloads/desktop/ArmoryVault-Linux-x86_64.AppImage';
     btnLabel = 'Download for Linux (.AppImage)';
   } else if (ua.includes('android')) {
     detectedCardId = 'download-mobile';
-    targetUrl =
-      'https://github.com/cook0001/ArmoryVault-Companion-App/releases/latest/download/app-release.apk';
+    targetUrl = '/downloads/mobile/armoryvault-companion-latest.apk';
     btnLabel = 'Download Android APK Direct';
   }
 

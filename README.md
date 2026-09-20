@@ -1,20 +1,20 @@
 # ArmoryVault (Tauri v2 Native Beta)
 
-[![Build All Native Installers](https://github.com/cook0001/ArmoryVault/actions/workflows/build-all.yml/badge.svg?branch=beta)](https://github.com/cook0001/ArmoryVault/actions/workflows/build-all.yml)
-[![Quality Control](https://github.com/cook0001/ArmoryVault/actions/workflows/qc.yml/badge.svg?branch=beta)](https://github.com/cook0001/ArmoryVault/actions/workflows/qc.yml)
+[![Build All Native Installers](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml/badge.svg?branch=beta)](https://github.com/cook0001/armoryvault-source/actions/workflows/build-all.yml)
+[![Quality Control](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml/badge.svg?branch=beta)](https://github.com/cook0001/armoryvault-source/actions/workflows/qc.yml)
 [![Tauri Version](https://img.shields.io/badge/Tauri-v2.0-blue.svg?style=flat-square&logo=tauri)](https://tauri.app)
 [![Rust Core](https://img.shields.io/badge/Rust-2021%20Edition-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Database](https://img.shields.io/badge/SQLite-In--Memory%20ACID-003B57.svg?style=flat-square&logo=sqlite)](https://sqlite.org)
 [![Security](https://img.shields.io/badge/Security-AES--256--GCM%20Zero--at--Rest-success.svg?style=flat-square)](SECURITY.md)
 [![Frontend](https://img.shields.io/badge/React-19%20%2B%20TypeScript-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
-[![License](https://img.shields.io/badge/License-ISC-purple.svg?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary%20Freeware-blue.svg?style=flat-square)](LICENSE)
 
 > **Welcome to the ArmoryVault Beta Branch.**  
 > This branch hosts the next-generation **native Tauri v2 rewrite** of ArmoryVault, delivering a **~95% smaller installer** and **~75% reduced memory footprint** while preserving 100% two-way data compatibility with existing user vaults and backups.
 
 ---
 
-## ⚡ Performance & Architectural Benchmarks
+## Performance & Architectural Benchmarks
 
 | Metric | ArmoryVault (Electron Stable) | ArmoryVault (Tauri v2 Beta) | Impact |
 | :--- | :--- | :--- | :--- |
@@ -29,7 +29,7 @@
 
 ---
 
-## 🛠️ Key Architectural Enhancements
+## Key Architectural Enhancements
 
 ### 1. Option A True Zero-at-Rest Architecture & In-Memory Working State
 
@@ -76,7 +76,7 @@ The Tauri build features an intelligent schema-adaptive ingestion engine support
 
 ---
 
-## 🔍 Quality Control, Audits & Verification
+## Quality Control, Audits & Verification
 
 ### Running Automated Test Suites
 
@@ -90,7 +90,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 # 3. Frontend TypeScript typechecking
 npm run typecheck
 
-# 4. Frontend Vitest suite (33 test files, 208 passing unit tests)
+# 4. Frontend Vitest suite (36 test files, 234 passing unit tests)
 npm test
 
 # 5. Production bundle build verification
@@ -109,7 +109,7 @@ Tauri leverages native WebKit (`WKWebView`) on macOS. You can run automated DOM,
 
 ---
 
-## 📦 Native Installers & CI Workflow
+## Native Installers & CI Workflow
 
 All installers are built automatically on every push to `beta` via [GitHub Actions](.github/workflows/build-all.yml):
 
@@ -121,7 +121,7 @@ Download the latest automated builds directly from the **Actions** tab or **Rele
 
 ---
 
-## 💻 Local Development Setup
+## Local Development Setup
 
 ### Prerequisites
 
@@ -138,40 +138,63 @@ Download the latest automated builds directly from the **Actions** tab or **Rele
      ```
 
 ### Getting Started
-
+ 
 1. **Clone the repository and switch to the beta branch:**
-
-   ```bash
-   git clone -b beta https://github.com/cook0001/ArmoryVault.git
-   cd ArmoryVault
-   ```
-
+ 
+    ```bash
+    git clone -b beta https://github.com/cook0001/armoryvault-source.git
+    cd armoryvault-source
+    ```
+ 
 2. **Install frontend dependencies:**
-
-   ```bash
-   npm install
-   ```
-
+ 
+    ```bash
+    npm install
+    ```
+ 
 3. **Run in development mode (with hot reloading):**
-
-   ```bash
-   npm run tauri:dev
-   ```
-
+ 
+    ```bash
+    npm run tauri:dev
+    ```
+ 
 4. **Build the production bundle locally:**
+ 
+    ```bash
+    npm run tauri:build
+    ```
+ 
+    Compiled binaries and installers will be generated under `src-tauri/target/release/bundle/`.
+ 
+---
 
-   ```bash
-   npm run tauri:build
-   ```
+## Precision Firearms Ecosystem
 
-   Compiled binaries and installers will be generated under `src-tauri/target/release/bundle/`.
+ArmoryVault is engineered as the central inventory and ATF compliance core of the firearms management ecosystem:
+
+- **[ArmsTrader (armstrader.store)](https://armstrader.store)** — Free web tools and digital utilities suite for firearm owners (Firearm Bill of Sale Generator, Nationwide FFL Finder, Shooting Range Locator, and 50-State Gun Laws Directory). *Note: ArmsTrader is NOT a marketplace, broker, or dealer.*
+- **[ArmoryVault Companion](https://github.com/cook0001/armoryvault-companion)** — Offline mobile firearm barcode scanner and encrypted LAN sync for Android.
+- **[Wildcat Studio](https://github.com/cook0001/wildcat-studio)** — High-performance cartridge CAD, chamber reamer modeling & internal cutaway telemetry suite.
+- **[LoadBench Studio](https://github.com/cook0001/loadbench)** — Industrial interior ballistics simulation, propellant combustion & chamber pressure modeling suite.
+- **[RangeStudio](https://github.com/cook0001/rangestudio)** — Precision exterior ballistics, 4th-order Runge-Kutta trajectory engine & optical reticle simulator.
 
 ---
 
-## 🔒 Security & Privacy Notice
-
+## Security & Privacy Notice
+ 
 ArmoryVault is **100% private, local, and air-gapped**:
-
+ 
 - **Zero Cloud Accounts**: No third-party accounts or logins.
 - **Zero Telemetry**: No tracking, analytics, or analytics beacons.
 - **Local LAN Only**: Companion synchronization operates strictly on your local Wi-Fi subnet.
+ 
+---
+ 
+## License
+ 
+ArmoryVault is proprietary software provided free of charge for personal, non-commercial use under the [ArmoryVault End User License Agreement](LICENSE). All Rights Reserved. Reverse engineering, decompilation, unauthorized redistribution, or commercial use without prior written authorization is prohibited.
+ 
+---
+ 
+*Copyright © 2026 ArmoryVault. All rights reserved.*
+

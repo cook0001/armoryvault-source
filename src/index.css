@@ -3238,6 +3238,145 @@ dialog.modal,
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* ─── Legal, License & EULA Dialog ─────────────────────────────────────── */
+.settings-about-metadata-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.settings-about-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.settings-about-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.settings-about-val-green {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.settings-about-val-cyan {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.settings-about-val-muted {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.modal-license-dialog {
+  max-width: 780px;
+  width: 92%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.license-highlight-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.license-highlight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-light);
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.license-body-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.license-preamble-box {
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 3px solid var(--accent);
+  padding: 0.85rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.25rem;
+}
+
+.license-preamble-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+
+.license-sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.license-section-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 1rem 1.15rem;
+}
+
+.license-section-heading {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.license-section-text {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.license-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+  margin-top: 0;
+}
+
+.license-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+
 /* ─── Widget Visibility Manager ─────────────────────────────────────── */
 .widget-mgr-card {
   border: 1px solid var(--border-light);
@@ -5388,12 +5527,352 @@ dialog.modal,
   margin-bottom: 0.5rem;
 }
 
+/* ==========================================================================
+   Sync Inbox Optic Zero Cards
+   ========================================================================== */
 
+.sync-item-optic-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(139, 92, 246, 0.04);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: var(--radius-md, 12px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  gap: 1.5rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
+.sync-item-optic-card:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.12);
+}
 
+.sync-item-optic-content {
+  flex: 1;
+}
 
+.sync-item-optic-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
 
+.sync-item-optic-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  background: rgba(139, 92, 246, 0.18);
+  color: #a78bfa;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 
+.sync-item-optic-date {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.85rem;
+}
 
+.sync-item-optic-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
 
+.sync-item-optic-title {
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary, #f8fafc);
+  font-weight: 600;
+}
 
+.sync-item-optic-icon {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.sync-item-optic-firearm-link {
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 400;
+}
+
+.sync-item-optic-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.sync-item-optic-meta-col {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sync-item-optic-meta-label {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.sync-item-optic-meta-value {
+  color: var(--text-primary, #f8fafc);
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+.sync-item-optic-notes {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.825rem;
+  color: var(--text-secondary, #94a3b8);
+  font-style: italic;
+}
+
+.sync-item-optic-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.sync-item-optic-approve-btn {
+  background: var(--success, #10b981);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sync-item-optic-delete-btn {
+  color: var(--danger, #ef4444);
+}
+
+/* ==========================================================================
+   Bluetooth Low Energy (BLE) Pairing Modal & Radar
+   ========================================================================== */
+
+.ble-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ble-radar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.ble-radar-visual {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.ble-radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(59, 130, 246, 0.35);
+  animation: ble-pulse-ring 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.ble-radar-ring-1 {
+  width: 50px;
+  height: 50px;
+  animation-delay: 0s;
+}
+
+.ble-radar-ring-2 {
+  width: 85px;
+  height: 85px;
+  animation-delay: 0.6s;
+}
+
+.ble-radar-ring-3 {
+  width: 120px;
+  height: 120px;
+  animation-delay: 1.2s;
+}
+
+@keyframes ble-pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.ble-radar-center-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+  z-index: 2;
+}
+
+.ble-radar-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  margin: 0 0 0.25rem 0;
+}
+
+.ble-radar-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0;
+  text-align: center;
+  max-width: 420px;
+}
+
+.ble-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ble-device-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 10px);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.ble-device-card:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.ble-device-card.selected {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.2);
+}
+
+.ble-device-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ble-device-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #60a5fa;
+}
+
+.ble-device-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+}
+
+.ble-device-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.ble-signal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+
+.ble-pin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 10px);
+  gap: 1rem;
+}
+
+.ble-pin-instruction {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #94a3b8);
+  text-align: center;
+  max-width: 440px;
+  margin: 0;
+}
+
+.ble-pin-input-field {
+  font-family: var(--font-mono, monospace);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.45em;
+  text-align: center;
+  width: 240px;
+  padding: 0.6rem 0.5rem;
+  background: rgba(10, 15, 30, 0.8);
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  color: #60a5fa;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+  outline: none;
+}
+
+.ble-security-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #34d399;
+}

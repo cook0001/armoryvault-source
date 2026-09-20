@@ -1,10 +1,10 @@
 # Contributing to ArmoryVault
 
-Thank you for your interest in contributing to **ArmoryVault**! As an open-source, zero-cloud firearm and ammunition inventory application, we welcome bug fixes, UI improvements, and feature contributions from the community.
+Thank you for your interest in contributing to **ArmoryVault**! As a free-to-use, zero-cloud firearm and ammunition inventory application, we welcome bug fixes, UI improvements, and approved feature contributions.
 
 ---
 
-## 🏛️ Guiding Architectural Principles
+## Architectural Principles
 
 Before contributing code, please keep our core tenets in mind:
 
@@ -14,12 +14,12 @@ Before contributing code, please keep our core tenets in mind:
 
 ---
 
-## 🛠️ Development Setup
+## Development Setup
 
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/cook0001/ArmoryVault.git
+   git clone git@github.com:cook0001/ArmoryVault.git
    cd ArmoryVault
    ```
 
@@ -32,12 +32,12 @@ Before contributing code, please keep our core tenets in mind:
 3. **Start the local development server**:
 
    ```bash
-   npm run electron:dev
+   npm run tauri:dev
    ```
 
 ---
 
-## 🧪 Testing & Quality Gates
+## Testing & Quality Gates
 
 Before submitting a Pull Request, all automated checks must pass:
 
@@ -61,7 +61,7 @@ Before submitting a Pull Request, all automated checks must pass:
 
 ---
 
-## 📋 Submitting Pull Requests
+## Submitting Pull Requests
 
 1. Create a feature branch from `main`:
 

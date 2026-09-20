@@ -6,12 +6,14 @@ import { SyncItemLogCard } from './SyncItemLogCard';
 import { SyncItemMediaCard } from './SyncItemMediaCard';
 import { SyncItemSessionCard } from './SyncItemSessionCard';
 import { SyncItemPayloadCard } from './SyncItemPayloadCard';
+import { SyncItemOpticZeroCard } from './SyncItemOpticZeroCard';
 
 export interface SyncInboxItemCardProps {
   item: SyncItem;
   ammoList: Ammo[];
   firearms: Firearm[];
   componentsList: ReloadingComponent[];
+  accessoriesList?: any[];
   isReloadingInstalled: boolean;
   isResolving: boolean;
   onApprove: (item: SyncItem) => void;
@@ -93,6 +95,18 @@ export const SyncInboxItemCard: React.FC<SyncInboxItemCardProps> = (props) => {
     );
   }
 
+  if (item.type === 'optic_zero_update') {
+    return (
+      <SyncItemOpticZeroCard
+        item={item}
+        firearms={props.firearms}
+        accessoriesList={props.accessoriesList || []}
+        onApprove={props.onApprove}
+        onDelete={props.onDelete}
+      />
+    );
+  }
+
   if (item.type === 'custom_payload') {
     return (
       <SyncItemPayloadCard
@@ -104,7 +118,7 @@ export const SyncInboxItemCard: React.FC<SyncInboxItemCardProps> = (props) => {
   }
 
   return (
-    <div key={item.id} className="card" style={{ padding: '1.5rem' }}>
+    <div key={item.id} className="card">
       <p>Unknown event type: {item.type}</p>
       <button className="btn-secondary" onClick={() => onDelete(item.id!)}>
         Dismiss
