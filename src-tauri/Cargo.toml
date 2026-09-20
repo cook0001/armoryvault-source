@@ -32,7 +32,7 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
 sha2 = "0.10"
-hmac = "0.12"
+hmac = "0.13"
 rand = "0.8"
 hex = "0.4"
 
