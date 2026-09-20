@@ -46,7 +46,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 zip = { version = "2", default-features = false, features = ["deflate"] }
 base64 = "0.22"
 reqwest = { version = "0.13", default-features = false, features = ["default-tls", "json"] }
-rfd = { version = "0.16", default-features = false, features = ["xdg-portal"] }
+rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 # System & Networking Helpers
