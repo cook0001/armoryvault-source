@@ -9,6 +9,10 @@
 - **Tauri Minisign (Ed25519) Release Signing (`tauri.conf.json`, `build-all.yml`)**:
   - Configured Tauri v2 Minisign public key and updater artifacts generation (`createUpdaterArtifacts: true`).
   - Integrated `TAURI_SIGNING_PRIVATE_KEY` into GitHub Actions release workflow for automated cross-platform binary signing.
+- **In-App OTA Software Updater (`src/components/modals/UpdateModal.tsx`, `SettingsModal.tsx`, `AboutLicenseSettingsSection.tsx`, `tauri-plugin-updater`)**:
+  - Integrated `@tauri-apps/plugin-updater` and `tauri-plugin-updater = "2"` with GitHub Releases endpoint.
+  - Implemented `UpdateModal` dialog with release notes rendering, live download progress tracking, and seamless application restart via `relaunch()`.
+  - Added "Check for Software Updates" trigger inside Settings Legal & Licensing section.
 
 ## [3.0.0] - 2026-09-19
 

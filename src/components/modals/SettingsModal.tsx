@@ -24,6 +24,7 @@ import {
 } from '../settings';
 import { CsvImportModal } from './CsvImportModal';
 import { LicenseModal } from './LicenseModal';
+import { UpdateModal } from './UpdateModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -52,6 +53,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
     const [showCollectionAnalytics, setShowCollectionAnalytics] = useState(false);
     const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
     const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [theme, setTheme] = useState<ThemeConfig>(() => getStoredTheme());
     const [customColor, setCustomColor] = useState<string>(
       () => theme.customAccentColor || '#3b82f6'
@@ -326,6 +328,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
               {/* Legal, Licensing & Data Sovereignty Section */}
               <AboutLicenseSettingsSection
                 onOpenLicenseModal={() => setIsLicenseModalOpen(true)}
+                onCheckForUpdates={() => setIsUpdateModalOpen(true)}
               />
             </div>
 
@@ -349,6 +352,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = React.memo(
           <LicenseModal
             isOpen={isLicenseModalOpen}
             onClose={() => setIsLicenseModalOpen(false)}
+          />
+        )}
+        {isUpdateModalOpen && (
+          <UpdateModal
+            isOpen={isUpdateModalOpen}
+            onClose={() => setIsUpdateModalOpen(false)}
           />
         )}
       </>,

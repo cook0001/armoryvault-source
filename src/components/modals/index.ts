@@ -18,3 +18,4 @@ export * from './ReloadingComponentModal';
 export * from './SettingsModal';
 export * from './SkuManagerModal';
 export * from './StorageLocationQRModal';
+export * from './UpdateModal';

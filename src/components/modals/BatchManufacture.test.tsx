@@ -82,6 +82,7 @@ describe('BatchManufactureModal Component', () => {
       expect(screen.getByText(/100 primers/i)).toBeDefined();
       expect(screen.getByText(/100 cases/i)).toBeDefined();
       expect(screen.getByText(/100 bullets/i)).toBeDefined();
+      expect(screen.getAllByText(/In Stock/i).length).toBeGreaterThan(0);
     });
 
     const submitBtn = screen.getByRole('button', { name: /Manufacture Batch/i });
