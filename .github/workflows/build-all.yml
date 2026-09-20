@@ -130,6 +130,14 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
     steps:
+      - name: Undraft & Publish Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          echo "Promoting draft release $TAG_NAME to public latest release..."
+          gh release edit "$TAG_NAME" --draft=false --prerelease=false --latest || true
+
       - name: Trigger ArmsTrader Store Direct Sync
         env:
           ARMSTRADER_WEBHOOK_KEY: ${{ secrets[format('{0}', 'ARMSTRADER_WEBHOOK_KEY')] }}
